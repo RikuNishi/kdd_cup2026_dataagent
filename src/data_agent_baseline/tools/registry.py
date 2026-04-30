@@ -165,8 +165,8 @@ def create_default_tool_registry() -> ToolRegistry:
         "answer": ToolSpec(
             name="answer",
             description=(
-                "最終回答テーブルを提出してタスクを終了します。"
-                "予測を確定できる段階でのみ使用します。"
+                "Submit the final answer table and terminate the task. "
+                "Use this only when the prediction is ready."
             ),
             input_schema={
                 "columns": ["column_name"],
@@ -176,17 +176,17 @@ def create_default_tool_registry() -> ToolRegistry:
         "execute_context_sql": ToolSpec(
             name="execute_context_sql",
             description=(
-                "`context/` 内の sqlite/db ファイルに対して読み取り専用 SQL を実行します。"
-                "使用できるのは SELECT / WITH / PRAGMA 文のみです。"
+                "Run read-only SQL against a sqlite/db file inside `context/`. "
+                "Only SELECT, WITH, and PRAGMA statements are allowed."
             ),
             input_schema={"path": "relative/path/to/file.sqlite", "sql": "SELECT ...", "limit": 200},
         ),
         "execute_python": ToolSpec(
             name="execute_python",
             description=(
-                "タスクの `context/` ディレクトリを作業ディレクトリとして任意の Python コードを実行します。"
-                "標準出力は `output`、標準エラー出力は `stderr` に入ります。"
-                f"実行タイムアウトは {EXECUTE_PYTHON_TIMEOUT_SECONDS} 秒です。"
+                "Run Python code with the task `context/` directory as the working directory. "
+                "`stdout` is returned as `output`, and `stderr` is returned as `stderr`. "
+                f"The execution timeout is {EXECUTE_PYTHON_TIMEOUT_SECONDS} seconds."
             ),
             input_schema={
                 "code": "import os\nprint(sorted(os.listdir('.')))",
@@ -195,40 +195,40 @@ def create_default_tool_registry() -> ToolRegistry:
         "inspect_sqlite_schema": ToolSpec(
             name="inspect_sqlite_schema",
             description=(
-                "`context/` 内の sqlite/db ファイルのスキーマを確認し、"
-                "ユーザー定義テーブルと CREATE 文を返します。"
+                "Inspect the schema of a sqlite/db file inside `context/`, "
+                "returning user-defined tables and their CREATE statements."
             ),
             input_schema={"path": "relative/path/to/file.sqlite"},
         ),
         "list_context": ToolSpec(
             name="list_context",
             description=(
-                "`context/` 配下にあるファイルとディレクトリを、"
-                "指定した深さまで列挙します。返されるパスは `context/` からの相対パスです。"
+                "List files and directories under `context/` up to the requested depth. "
+                "Returned paths are relative to `context/`."
             ),
             input_schema={"max_depth": 4},
         ),
         "read_csv": ToolSpec(
             name="read_csv",
             description=(
-                "`context/` 内の CSV ファイルを読み込み、"
-                "ヘッダー、先頭行のプレビュー、総行数を返します。"
+                "Read a CSV file inside `context/` and return the header, "
+                "preview rows, and total data row count."
             ),
             input_schema={"path": "relative/path/to/file.csv", "max_rows": 20},
         ),
         "read_doc": ToolSpec(
             name="read_doc",
             description=(
-                "`context/` 内のテキスト系ドキュメントのプレビューを返します。"
-                "大きいファイルは最大文字数で切り詰められます。"
+                "Preview a text document inside `context/`. "
+                "Large files are truncated to the requested maximum character count."
             ),
             input_schema={"path": "relative/path/to/file.md", "max_chars": 4000},
         ),
         "read_json": ToolSpec(
             name="read_json",
             description=(
-                "`context/` 内の JSON ファイルを整形してプレビュー表示します。"
-                "大きい内容は最大文字数で切り詰められます。"
+                "Pretty-print and preview a JSON file inside `context/`. "
+                "Large content is truncated to the requested maximum character count."
             ),
             input_schema={"path": "relative/path/to/file.json", "max_chars": 4000},
         ),

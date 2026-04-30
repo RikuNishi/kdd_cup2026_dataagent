@@ -8,6 +8,8 @@
 - 不要なリファクタリングや大きな設計変更は避け、依頼範囲に絞って変更する。
 - 既存のユーザー変更を巻き戻さない。
 - Python 実装を修正・追加する場合は、型ヒントと簡潔な日本語 docstring を入れる。
+- モデルに渡す system prompt、task prompt、tool description、修復指示などのプロンプト文言は英語で書く。
+- docstring、コメント、README、docs、memo など人間向けの解説は原則として日本語で書く。
 - ファイルパスは原則としてプロジェクトルートからの相対パスで扱う。
 - 仕様や運用に関わる変更をした場合は、`README.md` の改訂記録も更新する。
 
@@ -27,6 +29,10 @@ uv run dabench run-benchmark --config configs/react_baseline.example.yaml
 
 - `docs/overview.md`: `agents/` 配下のコード概要、ReAct 実行フロー、主要入出力。
 - `docs/submission.md`: KDD Cup 2026 の Docker image 提出方式、評価環境の I/O、環境変数、制限事項、提出前の次作業。
+
+## project-local skills
+
+- `skills/dabench-evaluate-run/SKILL.md`: `submit-run` や `run-benchmark` 後の `prediction.csv` を公開 `gold.csv` と照合し、ローカル評価スコアを出す手順。
 
 提出・評価環境に関わる作業では、先に `docs/submission.md` を確認してください。
 提出用 team_id は `SumRTA` です。Docker image は `SumRTA:v<N>`、archive は `SumRTA_v<N>.tar.gz` の形式にしてください。

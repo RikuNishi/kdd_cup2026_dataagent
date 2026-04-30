@@ -18,6 +18,7 @@ from rich.table import Table
 
 from data_agent_baseline.benchmark.dataset import DABenchPublicDataset
 from data_agent_baseline.config import apply_model_env_overrides, load_app_config
+from data_agent_baseline.evaluation import evaluate_run, write_evaluation_json
 from data_agent_baseline.run.runner import (
     TaskRunArtifacts,
     create_run_output_dir,
@@ -272,6 +273,80 @@ def run_benchmark_command(
     console.print(f"Run output: {run_output_dir}")
     console.print(f"Tasks attempted: {len(artifacts)}")
     console.print(f"Succeeded tasks: {sum(1 for item in artifacts if item.succeeded)}")
+
+
+@app.command("evaluate-run")
+def evaluate_run_command(
+    run_dir: Path = typer.Option(
+        ...,
+        exists=True,
+        file_okay=False,
+        help="task_<id>/prediction.csv を含む run 出力ディレクトリ。",
+    ),
+    gold_dir: Path = typer.Option(
+        DATA_DIR / "public" / "output",
+        exists=True,
+        file_okay=False,
+        help="task_<id>/gold.csv を含む正解ディレクトリ。",
+    ),
+    penalty_lambda: float = typer.Option(
+        0.1,
+        min=0.0,
+        help="冗長列 penalty の重み。公式値は公開仕様上では明示されていません。",
+    ),
+    output_json: Path | None = typer.Option(
+        None,
+        dir_okay=False,
+        help="詳細な評価結果 JSON の任意出力先。",
+    ),
+) -> None:
+    """ローカル予測を公開 gold.csv に対して評価する。"""
+
+    result = evaluate_run(
+        run_dir=run_dir,
+        gold_dir=gold_dir,
+        penalty_lambda=penalty_lambda,
+    )
+
+    table = Table(title="Local DABench Evaluation")
+    table.add_column("Item")
+    table.add_column("Value")
+    table.add_row("run_dir", str(run_dir.resolve()))
+    table.add_row("gold_dir", str(gold_dir.resolve()))
+    table.add_row("tasks", str(result.task_count))
+    table.add_row("scored_tasks", str(result.scored_task_count))
+    table.add_row("missing_predictions", str(result.missing_prediction_count))
+    table.add_row("average_score", f"{result.average_score:.6f}")
+    table.add_row("average_recall", f"{result.average_recall:.6f}")
+    table.add_row("penalty_lambda", f"{result.penalty_lambda:.6f}")
+    console.print(table)
+
+    detail_table = Table(title="Task Scores")
+    detail_table.add_column("Task")
+    detail_table.add_column("Score", justify="right")
+    detail_table.add_column("Recall", justify="right")
+    detail_table.add_column("Matched", justify="right")
+    detail_table.add_column("Gold", justify="right")
+    detail_table.add_column("Pred", justify="right")
+    detail_table.add_column("Extra", justify="right")
+    detail_table.add_column("Status")
+    for task in result.tasks:
+        status = "missing" if task.missing_prediction else "ok"
+        detail_table.add_row(
+            task.task_id,
+            f"{task.score:.6f}",
+            f"{task.recall:.6f}",
+            str(task.matched_columns),
+            str(task.gold_columns),
+            str(task.predicted_columns),
+            str(task.extra_columns),
+            status,
+        )
+    console.print(detail_table)
+
+    if output_json is not None:
+        write_evaluation_json(output_json, result)
+        console.print(f"Evaluation JSON: {output_json.resolve()}")
 
 
 @app.command("submit-run")

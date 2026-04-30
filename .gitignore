@@ -20,7 +20,6 @@ htmlcov/
 .env
 .env.local
 .env.*.local
-.codex
 
 # Local data and artifacts
 data/
@@ -36,3 +35,5 @@ configs/*
 # OS / notebook noise
 .DS_Store
 .ipynb_checkpoints/
+
+*.tar.gz

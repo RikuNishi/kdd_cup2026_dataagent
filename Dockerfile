@@ -1,4 +1,4 @@
-FROM python:3.12-slim
+FROM python:3.12-slim AS builder
 
 ENV PYTHONUNBUFFERED=1
 ENV UV_LINK_MODE=copy
@@ -13,4 +13,17 @@ COPY docs ./docs
 
 RUN uv sync --no-dev --frozen
 
-ENTRYPOINT ["uv", "run", "dabench", "submit-run"]
+
+FROM python:3.12-slim AS runtime
+
+ENV PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+COPY --from=builder /app/.venv ./.venv
+COPY --from=builder /app/configs ./configs
+COPY --from=builder /app/src ./src
+COPY --from=builder /app/docs ./docs
+COPY --from=builder /app/README.md ./README.md
+
+ENTRYPOINT ["/app/.venv/bin/dabench", "submit-run"]

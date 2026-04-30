@@ -10,149 +10,75 @@
 
 </div>
 
-> KDD Cup 2026 DataAgent-Bench チャレンジの公式スターターキットです。このリポジトリは `data/public/input/` からタスクを読み込み、評価用の予測結果を書き出します。
+> KDD Cup 2026 DataAgent-Bench チャレンジ向けのスターターキットです。公開デモデータセットを読み込み、各タスクの `prediction.csv` と実行ログを生成します。
 
 ## 概要
 
+このリポジトリは、DataAgent-Bench のタスクを ReAct 型 agent で解くための最小構成です。agent は各 `task_<id>/task.json` の質問を読み、同じタスクの `context/` 配下にある CSV、JSON、SQLite、Markdown 等をツール経由で確認し、最終回答を `prediction.csv` として出力します。
+
 | 項目 | 内容 |
 | --- | --- |
-| データセット入力 | `data/public/input/` |
-| 公開デモの正解 | `data/public/output/task_<id>/gold.csv` |
-| 隠しテストデータ | `input/` のみ。`output/` は含まれません |
-| 実行コマンド | `uv run dabench <command> --config PATH` |
-| デフォルト出力先 | `artifacts/runs/` |
+| 入力データ | `data/public/input/task_<id>/` |
+| 公開デモ正解 | `data/public/output/task_<id>/gold.csv` |
+| 通常実行出力 | `artifacts/runs/<run_id>/<task_id>/` |
+| 提出形式 | Docker image archive |
+| Team ID | `SumRTA` |
 
-## クイックスタート
+詳細:
 
-1. 公式ガイドに従って `uv` をインストールします。
-   - https://docs.astral.sh/uv/getting-started/installation/
-2. macOS / Linux では、次の standalone installer を利用できます。
+- Agent の内部フロー: `docs/overview.md`
+- 公式提出方式と評価環境: `docs/submission.md`
+- Public task の概要: `docs/tasks_summry.md`
+
+## 導入
+
+1. `uv` をインストールします。
 
    ```bash
    curl -LsSf https://astral.sh/uv/install.sh | sh
    ```
 
-3. プロジェクト依存関係をインストールします。
+2. 公開デモ dataset を Google Drive からダウンロードし、`data/public/` 配下に配置します。
+
+   - https://drive.google.com/file/d/1c6u5WlFw4KV7CBRyXh5BvFYbKqxhBSbL/view?usp=share_link
+
+   配置後、少なくとも `data/public/input/` が存在する状態にしてください。公開デモの正解を使ってローカル評価する場合は、`data/public/output/` も配置します。
+
+3. 依存関係を同期します。
 
    ```bash
    uv sync
    ```
 
-4. データセットルートが参照できることを確認します。
+4. 設定ファイルを作成します。ローカルの API key は git 管理しない `configs/react_baseline.local.yaml` に置いてください。
 
    ```bash
-   uv run dabench status --config configs/react_baseline.example.yaml
+   cp configs/react_baseline.example.yaml configs/react_baseline.local.yaml
    ```
 
-5. baseline を実行します。
+5. `configs/react_baseline.local.yaml` の `agent.model`, `agent.api_base`, `agent.api_key` をローカル検証用の OpenAI 互換 API に合わせます。
 
-   ```bash
-   uv run dabench run-benchmark --config configs/react_baseline.example.yaml
-   ```
+## ローカル実行
 
-## データセット
-
-公開デモデータセットは `data/public/input/` にあります。各タスクディレクトリは次の構成です。
-
-```text
-data/public/input/task_<id>/
-├── task.json
-└── context/
-```
-
-公開デモの正解ファイルは `data/public/output/task_<id>/gold.csv` にあります。
-隠しテストセットには `input/` のみが含まれ、`output/` ディレクトリはありません。
-
-`task.json` には次の項目が含まれます。
-
-- `task_id`
-- `difficulty`
-- `question`
-
-`context/` には、次のようなファイルが 1 つ以上含まれます。
-
-- CSV ファイル
-- JSON ファイル
-- SQLite / DB ファイル
-- テキストドキュメント
-
-## 設定
-
-設定例は `configs/react_baseline.example.yaml` にあります。
-
-```yaml
-dataset:
-  root_path: data/public/input
-
-agent:
-  model: YOUR_MODEL_NAME
-  api_base: YOUR_API_BASE_URL
-  api_key: YOUR_API_KEY
-  max_steps: 16
-  temperature: 0.0
-
-run:
-  output_dir: artifacts/runs
-  run_id:
-  max_workers: 4
-  task_timeout_seconds: 600
-```
-
-設定項目:
-
-| 項目 | 説明 |
-| --- | --- |
-| `dataset.root_path` | 公開デモ `input/` データセットのルート。相対パスはプロジェクトルートから解決されます。 |
-| `agent.model` | モデル名。 |
-| `agent.api_base` | OpenAI 互換 API のベース URL。 |
-| `agent.api_key` | API キー。設定ファイルから直接読み込まれます。 |
-| `agent.max_steps` | 1 タスクあたりの最大 ReAct ステップ数。 |
-| `agent.temperature` | サンプリング温度。 |
-| `run.output_dir` | 実行成果物の出力ディレクトリ。 |
-| `run.run_id` | 任意の実行ディレクトリ名。省略時は UTC タイムスタンプ。単一ディレクトリ名のみ指定でき、既存ディレクトリは拒否されます。 |
-| `run.max_workers` | `run-benchmark` の並列 worker 数。 |
-| `run.task_timeout_seconds` | 1 タスクあたりの最大実行時間。`0` 以下にするとタスク単位のタイムアウトを無効化します。 |
-
-## CLI
+データセットの認識確認:
 
 ```bash
-uv run dabench <command> --config PATH [options]
+uv run dabench status --config configs/react_baseline.local.yaml
 ```
 
-| コマンド | 目的 | 例 |
-| --- | --- | --- |
-| `status` | プロジェクトパス、設定ファイル、データセットルート、公開タスク数を表示します。 | `uv run dabench status --config configs/react_baseline.example.yaml` |
-| `inspect-task` | タスクのメタデータと `context/` 配下のアクセス可能なファイルを表示します。 | `uv run dabench inspect-task task_1 --config configs/react_baseline.local.yaml` |
-| `run-task` | 1 つのタスクで baseline を実行し、結果を書き出します。 | `uv run dabench run-task task_1 --config configs/react_baseline.local.yaml` |
-| `run-benchmark` | 公開データセット全体で baseline を実行します。 | `uv run dabench run-benchmark --config configs/react_baseline.local.yaml` |
+1 タスクだけ実行:
 
-`run-benchmark` は `--limit N` により実行タスク数を制限できます。
+```bash
+uv run dabench run-task task_11 --config configs/react_baseline.local.yaml
+```
 
-## ツール
+複数タスクを実行:
 
-baseline はモデルに次のツールを公開します。
+```bash
+uv run dabench run-benchmark --config configs/react_baseline.local.yaml --limit 5
+```
 
-| ツール | 目的 | 入力 |
-| --- | --- | --- |
-| `list_context` | `context/` 配下のファイルとディレクトリを列挙します。 | `max_depth` |
-| `read_csv` | CSV のプレビューを読み込みます。 | `path`, `max_rows` |
-| `read_json` | JSON のプレビューを読み込みます。 | `path`, `max_chars` |
-| `read_doc` | テキストドキュメントのプレビューを読み込みます。 | `path`, `max_chars` |
-| `inspect_sqlite_schema` | SQLite / DB ファイルのテーブルを確認します。 | `path` |
-| `execute_context_sql` | `context/` 内の SQLite / DB ファイルに対して読み取り専用 SQL を実行します。 | `path`, `sql`, `limit` |
-| `execute_python` | タスクの `context/` ディレクトリ内で任意の Python コードを実行します。 | `code` |
-| `answer` | 最終回答テーブルを提出し、タスクを終了します。 | `columns`, `rows` |
-
-ツールに渡すファイルパスは、すべてタスクの `context/` ディレクトリからの相対パスで指定します。
-
-## 出力
-
-タスクが成功すると、次のファイルが生成されます。
-
-- `trace.json`
-- `prediction.csv`
-
-タスクごとの出力先:
+主な出力:
 
 ```text
 artifacts/runs/<run_id>/<task_id>/
@@ -160,25 +86,103 @@ artifacts/runs/<run_id>/<task_id>/
 └── prediction.csv
 ```
 
-ベンチマーク実行時は、次のファイルも生成されます。
+`trace.json` には、モデル応答、実行した action、tool observation、最終回答が記録されます。
 
-```text
-artifacts/runs/<run_id>/summary.json
+## ローカル評価
+
+公開デモの `gold.csv` がある範囲では、run 出力をローカル評価できます。
+
+```bash
+uv run dabench evaluate-run \
+  --run-dir artifacts/runs/<run_id> \
+  --gold-dir data/public/output \
+  --output-json artifacts/runs/<run_id>/evaluation.json
 ```
 
+この評価は公式 scoring rules に近づけたローカル近似です。hidden test の公式スコアそのものではありません。
 
-## 主要モジュール
+## 提出の重要事項
 
-| モジュール | 役割 |
-| --- | --- |
-| `src/data_agent_baseline/benchmark/dataset.py` | 公開データセットローダー |
-| `src/data_agent_baseline/tools/filesystem.py` | `list_context`, `read_csv`, `read_json`, `read_doc` |
-| `src/data_agent_baseline/tools/python_exec.py` | `execute_python` |
-| `src/data_agent_baseline/tools/sqlite.py` | `inspect_sqlite_schema`, `execute_context_sql` |
-| `src/data_agent_baseline/tools/registry.py` | ツール登録と終端アクション `answer` |
-| `src/data_agent_baseline/agents/prompt.py` | system prompt、task prompt、observation prompt |
-| `src/data_agent_baseline/agents/react.py` | JSON action protocol に基づく ReAct runtime |
-| `src/data_agent_baseline/run/runner.py` | 単一タスク実行とベンチマーク実行 |
+公式提出は `prediction.csv` 単体ではなく、Docker image archive です。評価環境では `/input`, `/output`, `/logs` が mount され、`MODEL_API_URL`, `MODEL_API_KEY`, `MODEL_NAME` が注入されます。この実装は `submit-run` でそれらを読み、評価時は主催側 Qwen `qwen3.5-35b-a3b` に接続します。
+
+Docker の repository name は小文字必須です。Team ID は `SumRTA` ですが、image tag は `sumrta:v<N>`、archive 名とメール上の Team ID は `SumRTA` を使います。
+
+```text
+Docker image tag: sumrta:v1
+Archive filename: SumRTA_v1.tar.gz
+Team ID in email: SumRTA
+```
+
+### 1. Docker image を build
+
+```bash
+docker build -t sumrta:v1 .
+```
+
+entrypoint 確認:
+
+```bash
+docker image inspect sumrta:v1 \
+  --format '{{json .Config.Entrypoint}}'
+```
+
+期待値:
+
+```text
+["/app/.venv/bin/dabench","submit-run"]
+```
+
+### 2. Docker image を疑似評価
+
+API key は Dockerfile や config に書かず、環境変数として渡します。
+
+```bash
+export MODEL_API_URL="https://openrouter.ai/api/v1"
+export MODEL_API_KEY="YOUR_LOCAL_API_KEY"
+export MODEL_NAME="qwen3.5-35b-a3b"
+
+rm -rf /tmp/dabench-output /tmp/dabench-logs
+mkdir -p /tmp/dabench-output /tmp/dabench-logs
+
+docker run --rm \
+  -v "$PWD/data/public/input:/input:ro" \
+  -v /tmp/dabench-output:/output \
+  -v /tmp/dabench-logs:/logs \
+  -e MODEL_API_URL="$MODEL_API_URL" \
+  -e MODEL_API_KEY="$MODEL_API_KEY" \
+  -e MODEL_NAME="$MODEL_NAME" \
+  sumrta:v1 --limit 1
+```
+
+確認項目:
+
+- `/tmp/dabench-output/task_<id>/prediction.csv` が生成される。
+- `/tmp/dabench-logs/runtime.log` が生成される。
+- `/tmp/dabench-logs/task_<id>/trace.json` が生成される。
+- `data/public/input` が変更されていない。
+
+
+### 3. 提出用 archive を作成
+
+```bash
+docker save sumrta:v1 | gzip > SumRTA_v1.tar.gz
+ls -lh SumRTA_v1.tar.gz
+```
+
+archive は 10GB 以下にしてください。
+
+### 4. Google Drive 経由で提出
+
+`SumRTA_v1.tar.gz` を Google Drive にアップロードし、「リンクを知っている全員が閲覧可」に設定してから、公式 Rules の形式でメール提出します。
+
+```text
+Subject: [KDDCup2026 Data Agents] Submission - SumRTA - v1
+Team ID: SumRTA
+Version: v1
+Sharing link: <Google Drive link>
+```
+
+評価完了通知を受け取るまで、Google Drive 上の archive は削除・変更しないでください。
 
 ## 改訂記録
 
@@ -186,6 +190,15 @@ artifacts/runs/<run_id>/summary.json
 
 | 日付 | 内容 |
 | --- | --- |
+| 2026-04-30 | 公開デモ dataset の Google Drive ダウンロードリンクと配置先を導入手順に追記。 |
+| 2026-04-30 | README を概要・導入・ローカル実行・評価・提出手順中心に整理し、詳細な tool/module 説明を docs 参照へ移動。 |
+| 2026-04-30 | Docker build、ローカル疑似評価、ローカル採点、archive 作成、Google Drive 提出までの手順を追加。 |
+| 2026-04-30 | Dockerfile をマルチステージ化し、runtime image から `uv` と build 用ファイルを除外。 |
+| 2026-04-30 | Docker 提出 image の entrypoint を `.venv/bin/dabench` 直接実行に変更し、起動時の `uv run` 再同期を回避。 |
+| 2026-04-30 | `submit-run` 後の評価手順を project-local skill `.codex/skills/dabench-evaluate-run` として追加。 |
+| 2026-04-30 | 公開デモの `gold.csv` に対する `evaluate-run` コマンドを追加。 |
+| 2026-04-30 | `AGENTS.md` にプロンプト文言は英語、人間向け解説は日本語とする言語方針を追記。 |
+| 2026-04-30 | モデル向けツール説明文を system prompt と揃えて英語化。 |
 | 2026-04-30 | 公式提出向けの `submit-run`、Dockerfile、`.dockerignore` を追加し、`MODEL_*` 環境変数優先の実行方針を整理。 |
 | 2026-04-30 | `docs/submission.md` を追加し、KDD Cup 2026 の Docker image 提出方式と次の対応事項を整理。 |
 | 2026-04-30 | README を日本語化し、プロジェクト概要・実行手順・主要モジュールを整理。 |
