@@ -21,6 +21,12 @@ class ReActAgentConfig:
     max_steps: int = 16
 
 
+INVALID_RESPONSE_ASSISTANT_MESSAGE = (
+    "The previous response was invalid and could not be executed. "
+    "Follow the observation repair instructions exactly."
+)
+
+
 def _strip_json_fence(raw_response: str) -> str:
     text = raw_response.strip()
     fence_match = re.search(r"```json\s*(.*?)\s*```", text, flags=re.IGNORECASE | re.DOTALL)
@@ -66,6 +72,33 @@ def parse_model_step(raw_response: str) -> ModelStep:
     )
 
 
+def _build_error_observation(exc: Exception, raw_response: str) -> dict[str, object]:
+    return {
+        "ok": False,
+        "error": str(exc),
+        "error_type": type(exc).__name__,
+        "invalid_response_preview": raw_response[:1000],
+        "repair_instruction": (
+            "The previous response was invalid JSON or did not match the action protocol. "
+            "Return only one minimal JSON object next. Do not repeat the invalid response. "
+            "`action_input` must be a JSON object. For execute_python, use "
+            '`action_input`: {"code": "..."} and escape newlines inside the JSON string.'
+        ),
+        "required_format": {
+            "thought": "short reason",
+            "action": "one registered tool name",
+            "action_input": {},
+        },
+        "execute_python_example": {
+            "thought": "Run Python to inspect the data.",
+            "action": "execute_python",
+            "action_input": {
+                "code": "import json\nprint('ok')",
+            },
+        },
+    }
+
+
 class ReActAgent:
     def __init__(
         self,
@@ -88,7 +121,12 @@ class ReActAgent:
         messages = [ModelMessage(role="system", content=system_content)]
         messages.append(ModelMessage(role="user", content=build_task_prompt(task)))
         for step in state.steps:
-            messages.append(ModelMessage(role="assistant", content=step.raw_response))
+            assistant_content = (
+                INVALID_RESPONSE_ASSISTANT_MESSAGE
+                if step.action == "__error__"
+                else step.raw_response
+            )
+            messages.append(ModelMessage(role="assistant", content=assistant_content))
             messages.append(
                 ModelMessage(role="user", content=build_observation_prompt(step.observation))
             )
@@ -120,10 +158,7 @@ class ReActAgent:
                     state.answer = tool_result.answer
                     break
             except Exception as exc:
-                observation = {
-                    "ok": False,
-                    "error": str(exc),
-                }
+                observation = _build_error_observation(exc, raw_response)
                 state.steps.append(
                     StepRecord(
                         step_index=step_index,

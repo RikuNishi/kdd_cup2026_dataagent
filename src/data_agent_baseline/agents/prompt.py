@@ -16,8 +16,10 @@ Rules:
 3. The task is complete only when you call the `answer` tool.
 4. The `answer` tool must receive a table with `columns` and `rows`.
 5. Always return exactly one JSON object with keys `thought`, `action`, and `action_input`.
-6. Always wrap that JSON object in exactly one fenced code block that starts with ```json and ends with ```.
-7. Do not output any text before or after the fenced JSON block.
+6. `action_input` must always be a JSON object, never a string, array, or null.
+7. For `execute_python`, put code in `action_input.code` as one JSON string with escaped newlines.
+8. Prefer a raw JSON object. A single fenced ```json block is also accepted.
+9. Do not output any text before or after the JSON object.
 
 Keep reasoning concise and grounded in the observed data.
 """.strip()
@@ -32,6 +34,11 @@ Example response when you have the final answer:
 ```json
 {"thought":"I have the final result table.","action":"answer","action_input":{"columns":["average_long_shots"],"rows":[["63.5"]]}}
 ```
+
+Example response when you need to run Python:
+```json
+{"thought":"I will compute the result from the context files.","action":"execute_python","action_input":{"code":"import json\nfrom pathlib import Path\nprint(Path('.').resolve())"}}
+```
 """.strip()
 
 
@@ -42,8 +49,9 @@ def build_system_prompt(tool_descriptions: str, system_prompt: str | None = None
         "Available tools:\n"
         f"{tool_descriptions}\n\n"
         f"{RESPONSE_EXAMPLES}\n\n"
-        "You must always return a single ```json fenced block containing one JSON object "
-        "with keys `thought`, `action`, and `action_input`, and no extra text."
+        "You must always return exactly one JSON object with keys `thought`, `action`, "
+        "and `action_input`, and no extra text. `action_input` must be an object. "
+        "When using `execute_python`, put the Python source in `action_input.code`."
     )
 
 

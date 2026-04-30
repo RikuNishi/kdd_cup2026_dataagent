@@ -1,3 +1,5 @@
+from dataclasses import replace
+from datetime import datetime, timezone
 from pathlib import Path
 from time import perf_counter
 
@@ -15,8 +17,14 @@ from rich.progress import (
 from rich.table import Table
 
 from data_agent_baseline.benchmark.dataset import DABenchPublicDataset
-from data_agent_baseline.config import load_app_config
-from data_agent_baseline.run.runner import TaskRunArtifacts, create_run_output_dir, run_benchmark, run_single_task
+from data_agent_baseline.config import apply_model_env_overrides, load_app_config
+from data_agent_baseline.run.runner import (
+    TaskRunArtifacts,
+    create_run_output_dir,
+    run_benchmark,
+    run_single_task,
+    run_submit_benchmark,
+)
 from data_agent_baseline.tools.filesystem import list_context_tree
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -67,6 +75,15 @@ def _build_compact_progress_fields(
         "speed": _format_compact_rate(completed_count, elapsed_seconds),
         "last": _format_last_task(last_artifact),
     }
+
+
+def _append_runtime_log(log_path: Path, message: str) -> None:
+    """提出用 runtime log に UTC 時刻付きで 1 行追記する。"""
+
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now(timezone.utc).isoformat()
+    with log_path.open("a", encoding="utf-8") as handle:
+        handle.write(f"{timestamp} {message}\n")
 
 
 @app.callback()
@@ -255,6 +272,92 @@ def run_benchmark_command(
     console.print(f"Run output: {run_output_dir}")
     console.print(f"Tasks attempted: {len(artifacts)}")
     console.print(f"Succeeded tasks: {sum(1 for item in artifacts if item.succeeded)}")
+
+
+@app.command("submit-run")
+def submit_run_command(
+    config: Path = typer.Option(
+        PROJECT_ROOT / "configs" / "react_baseline.example.yaml",
+        exists=True,
+        dir_okay=False,
+        help="YAML config path. MODEL_* environment variables override model settings.",
+    ),
+    input_dir: Path = typer.Option(
+        Path("/input"),
+        exists=True,
+        file_okay=False,
+        help="Evaluation input directory mounted by the official runner.",
+    ),
+    output_dir: Path = typer.Option(
+        Path("/output"),
+        file_okay=False,
+        help="Directory where task_<id>/prediction.csv files are written.",
+    ),
+    logs_dir: Path = typer.Option(
+        Path("/logs"),
+        file_okay=False,
+        help="Directory where runtime.log and per-task traces are written.",
+    ),
+    limit: int | None = typer.Option(None, min=1, help="Maximum number of tasks to run."),
+) -> None:
+    """Run all mounted evaluation tasks and write official submission outputs."""
+
+    app_config = apply_model_env_overrides(load_app_config(config))
+    app_config = replace(
+        app_config,
+        dataset=replace(app_config.dataset, root_path=input_dir.resolve()),
+    )
+    logs_dir.mkdir(parents=True, exist_ok=True)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    runtime_log_path = logs_dir / "runtime.log"
+    dataset = DABenchPublicDataset(app_config.dataset.root_path)
+    task_total = len(dataset.iter_tasks())
+    if limit is not None:
+        task_total = min(task_total, limit)
+
+    _append_runtime_log(
+        runtime_log_path,
+        (
+            f"submit-run start input={app_config.dataset.root_path} "
+            f"output={output_dir.resolve()} logs={logs_dir.resolve()} tasks={task_total}"
+        ),
+    )
+    console.print(f"Submit input: {app_config.dataset.root_path}")
+    console.print(f"Submit output: {output_dir.resolve()}")
+    console.print(f"Submit logs: {logs_dir.resolve()}")
+
+    started_at = perf_counter()
+
+    def on_task_complete(artifact: TaskRunArtifacts) -> None:
+        status = "ok" if artifact.succeeded else "fail"
+        _append_runtime_log(
+            runtime_log_path,
+            (
+                f"task={artifact.task_id} status={status} "
+                f"prediction={artifact.prediction_csv_path or '-'} "
+                f"trace={artifact.trace_path} failure={artifact.failure_reason or '-'}"
+            ),
+        )
+
+    artifacts = run_submit_benchmark(
+        config=app_config,
+        output_dir=output_dir.resolve(),
+        logs_dir=logs_dir.resolve(),
+        limit=limit,
+        progress_callback=on_task_complete,
+    )
+    succeeded_count = sum(1 for item in artifacts if item.succeeded)
+    elapsed_seconds = perf_counter() - started_at
+    _append_runtime_log(
+        runtime_log_path,
+        (
+            f"submit-run end attempted={len(artifacts)} succeeded={succeeded_count} "
+            f"failed={len(artifacts) - succeeded_count} elapsed_seconds={elapsed_seconds:.3f}"
+        ),
+    )
+    console.print(f"Tasks attempted: {len(artifacts)}")
+    console.print(f"Succeeded tasks: {succeeded_count}")
+    console.print(f"Runtime log: {runtime_log_path.resolve()}")
 
 
 def main() -> None:

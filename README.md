@@ -166,50 +166,6 @@ artifacts/runs/<run_id>/<task_id>/
 artifacts/runs/<run_id>/summary.json
 ```
 
-## 連絡先
-
-- Issue: https://github.com/HKUSTDial/kddcup2026-data-agents-starter-kit/issues
-- 公式サイト: https://dataagent.top
-- Discord: https://discord.com/invite/7eFwJQN3Fx
-- WeChat 公式アカウント: `数据智能与分析实验室 DIAL`
-
-<div align="center">
-  <table>
-    <tr>
-      <td align="center">
-        <a href="https://dataagent.top">
-          <img
-            src="https://api.qrserver.com/v1/create-qr-code/?size=144x144&data=https://dataagent.top&bgcolor=ffffff&color=111827&margin=8"
-            alt="Official website QR code"
-            width="144"
-          />
-        </a>
-        <br />
-        公式サイト
-      </td>
-      <td align="center">
-        <a href="https://discord.com/invite/7eFwJQN3Fx">
-          <img
-            src="https://api.qrserver.com/v1/create-qr-code/?size=144x144&data=https://discord.com/invite/7eFwJQN3Fx&bgcolor=ffffff&color=111827&margin=8"
-            alt="Discord QR code"
-            width="144"
-          />
-        </a>
-        <br />
-        Discord
-      </td>
-      <td align="center">
-        <img
-          src="https://dataagent.top/HKUSTGZ_DIAL.jpg"
-          alt="WeChat official account QR code"
-          width="144"
-        />
-        <br />
-        WeChat 公式アカウント
-      </td>
-    </tr>
-  </table>
-</div>
 
 ## 主要モジュール
 
@@ -223,3 +179,13 @@ artifacts/runs/<run_id>/summary.json
 | `src/data_agent_baseline/agents/prompt.py` | system prompt、task prompt、observation prompt |
 | `src/data_agent_baseline/agents/react.py` | JSON action protocol に基づく ReAct runtime |
 | `src/data_agent_baseline/run/runner.py` | 単一タスク実行とベンチマーク実行 |
+
+## 改訂記録
+
+このリポジトリで仕様、設定、実行手順、エージェント挙動に関わる変更を行った場合は、この節に日付と概要を追記してください。
+
+| 日付 | 内容 |
+| --- | --- |
+| 2026-04-30 | 公式提出向けの `submit-run`、Dockerfile、`.dockerignore` を追加し、`MODEL_*` 環境変数優先の実行方針を整理。 |
+| 2026-04-30 | `docs/submission.md` を追加し、KDD Cup 2026 の Docker image 提出方式と次の対応事項を整理。 |
+| 2026-04-30 | README を日本語化し、プロジェクト概要・実行手順・主要モジュールを整理。 |

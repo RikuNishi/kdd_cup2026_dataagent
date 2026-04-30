@@ -71,6 +71,9 @@ def build_model_adapter(config: AppConfig):
 
 
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
+    """JSON ファイルを UTF-8 で整形して書き出す。"""
+
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
 
 
@@ -191,6 +194,39 @@ def _write_task_outputs(task_id: str, run_output_dir: Path, run_result: dict[str
     )
 
 
+def _write_submit_task_outputs(
+    task_id: str,
+    output_dir: Path,
+    logs_dir: Path,
+    run_result: dict[str, Any],
+) -> TaskRunArtifacts:
+    """提出環境の `/output` と `/logs` 形式で 1 タスク分を書き出す。"""
+
+    task_output_dir = output_dir / task_id
+    task_log_dir = logs_dir / task_id
+    trace_path = task_log_dir / "trace.json"
+    _write_json(trace_path, run_result)
+
+    prediction_csv_path: Path | None = None
+    answer = run_result.get("answer")
+    if isinstance(answer, dict):
+        prediction_csv_path = task_output_dir / "prediction.csv"
+        _write_csv(
+            prediction_csv_path,
+            list(answer.get("columns", [])),
+            [list(row) for row in answer.get("rows", [])],
+        )
+
+    return TaskRunArtifacts(
+        task_id=task_id,
+        task_output_dir=task_output_dir,
+        prediction_csv_path=prediction_csv_path,
+        trace_path=trace_path,
+        succeeded=bool(run_result.get("succeeded")),
+        failure_reason=run_result.get("failure_reason"),
+    )
+
+
 def run_single_task(
     *,
     task_id: str,
@@ -206,6 +242,26 @@ def run_single_task(
         run_result = _run_single_task_core(task_id=task_id, config=config, model=model, tools=tools)
     run_result["e2e_elapsed_seconds"] = round(perf_counter() - started_at, 3)
     return _write_task_outputs(task_id, run_output_dir, run_result)
+
+
+def run_submit_task(
+    *,
+    task_id: str,
+    config: AppConfig,
+    output_dir: Path,
+    logs_dir: Path,
+    model=None,
+    tools: ToolRegistry | None = None,
+) -> TaskRunArtifacts:
+    """提出用 I/O 形式で 1 タスクを実行し、prediction と trace を分けて保存する。"""
+
+    started_at = perf_counter()
+    if model is None and tools is None:
+        run_result = _run_single_task_with_timeout(task_id=task_id, config=config)
+    else:
+        run_result = _run_single_task_core(task_id=task_id, config=config, model=model, tools=tools)
+    run_result["e2e_elapsed_seconds"] = round(perf_counter() - started_at, 3)
+    return _write_submit_task_outputs(task_id, output_dir, logs_dir, run_result)
 
 
 def run_benchmark(
@@ -278,3 +334,67 @@ def run_benchmark(
         },
     )
     return run_output_dir, task_artifacts
+
+
+def run_submit_benchmark(
+    *,
+    config: AppConfig,
+    output_dir: Path,
+    logs_dir: Path,
+    model=None,
+    tools: ToolRegistry | None = None,
+    limit: int | None = None,
+    progress_callback: Callable[[TaskRunArtifacts], None] | None = None,
+) -> list[TaskRunArtifacts]:
+    """公式提出用に全タスクを実行し、`/output/task_id/prediction.csv` へ保存する。"""
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    logs_dir.mkdir(parents=True, exist_ok=True)
+    dataset = DABenchPublicDataset(config.dataset.root_path)
+    tasks = dataset.iter_tasks()
+    if limit is not None:
+        tasks = tasks[:limit]
+
+    effective_workers = config.run.max_workers
+    if effective_workers < 1:
+        raise ValueError("max_workers must be at least 1.")
+    if model is not None or tools is not None:
+        effective_workers = 1
+
+    task_ids = [task.task_id for task in tasks]
+    if effective_workers == 1:
+        shared_model = model or build_model_adapter(config)
+        shared_tools = tools or create_default_tool_registry()
+        task_artifacts = []
+        for task_id in task_ids:
+            artifact = run_submit_task(
+                task_id=task_id,
+                config=config,
+                output_dir=output_dir,
+                logs_dir=logs_dir,
+                model=shared_model,
+                tools=shared_tools,
+            )
+            task_artifacts.append(artifact)
+            if progress_callback is not None:
+                progress_callback(artifact)
+        return task_artifacts
+
+    with ThreadPoolExecutor(max_workers=effective_workers) as executor:
+        future_to_index = {
+            executor.submit(
+                run_submit_task,
+                task_id=task_id,
+                config=config,
+                output_dir=output_dir,
+                logs_dir=logs_dir,
+            ): index
+            for index, task_id in enumerate(task_ids)
+        }
+        indexed_artifacts: list[TaskRunArtifacts | None] = [None] * len(task_ids)
+        for future in as_completed(future_to_index):
+            artifact = future.result()
+            indexed_artifacts[future_to_index[future]] = artifact
+            if progress_callback is not None:
+                progress_callback(artifact)
+        return [artifact for artifact in indexed_artifacts if artifact is not None]

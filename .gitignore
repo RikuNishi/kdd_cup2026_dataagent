@@ -22,10 +22,9 @@ htmlcov/
 .env.*.local
 .codex
 
-# Local data, docs, tests, and artifacts
+# Local data and artifacts
 data/
-docs/
-tests/
+public/
 evaluation/
 artifacts/*
 !artifacts/.gitkeep

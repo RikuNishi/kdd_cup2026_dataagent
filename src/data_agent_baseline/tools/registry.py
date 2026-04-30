@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from typing import Any, Callable
 
@@ -145,7 +146,8 @@ class ToolRegistry:
         for name in sorted(self.specs):
             spec = self.specs[name]
             lines.append(f"- {spec.name}: {spec.description}")
-            lines.append(f"  input_schema: {spec.input_schema}")
+            rendered_schema = json.dumps(spec.input_schema, ensure_ascii=False)
+            lines.append(f"  action_input JSON example: {rendered_schema}")
         return "\n".join(lines)
 
     def execute(self, task: PublicTask, action: str, action_input: dict[str, Any]) -> ToolExecutionResult:

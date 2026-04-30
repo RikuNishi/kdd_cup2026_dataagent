@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Protocol
 
-from openai import APIError, OpenAI
+from openai import APIError, BadRequestError, OpenAI
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,11 +49,20 @@ class OpenAIModelAdapter:
         )
 
         try:
-            response = client.chat.completions.create(
-                model=self.model,
-                messages=[{"role": message.role, "content": message.content} for message in messages],
-                temperature=self.temperature
-            )
+            request_payload = {
+                "model": self.model,
+                "messages": [
+                    {"role": message.role, "content": message.content} for message in messages
+                ],
+                "temperature": self.temperature,
+                "response_format": {"type": "json_object"},
+            }
+            response = client.chat.completions.create(**request_payload)
+        except BadRequestError as exc:
+            if "response_format" not in str(exc):
+                raise RuntimeError(f"Model request failed: {exc}") from exc
+            request_payload.pop("response_format", None)
+            response = client.chat.completions.create(**request_payload)
         except APIError as exc:
             raise RuntimeError(f"Model request failed: {exc}") from exc
 

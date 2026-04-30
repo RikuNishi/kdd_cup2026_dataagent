@@ -7,8 +7,9 @@
 - 変更前に既存実装を確認し、現在の構成と命名に合わせる。
 - 不要なリファクタリングや大きな設計変更は避け、依頼範囲に絞って変更する。
 - 既存のユーザー変更を巻き戻さない。
-- Python 実装では型ヒントと簡潔な docstring を保つ。
+- Python 実装を修正・追加する場合は、型ヒントと簡潔な日本語 docstring を入れる。
 - ファイルパスは原則としてプロジェクトルートからの相対パスで扱う。
+- 仕様や運用に関わる変更をした場合は、`README.md` の改訂記録も更新する。
 
 ## 主要コマンド
 
@@ -21,6 +22,14 @@ uv run dabench run-benchmark --config configs/react_baseline.example.yaml
 ```
 
 `run-benchmark` は `--limit N` で実行タスク数を制限できます。
+
+## docs 参照
+
+- `docs/overview.md`: `agents/` 配下のコード概要、ReAct 実行フロー、主要入出力。
+- `docs/submission.md`: KDD Cup 2026 の Docker image 提出方式、評価環境の I/O、環境変数、制限事項、提出前の次作業。
+
+提出・評価環境に関わる作業では、先に `docs/submission.md` を確認してください。
+提出用 team_id は `SumRTA` です。Docker image は `SumRTA:v<N>`、archive は `SumRTA_v<N>.tar.gz` の形式にしてください。
 
 ## データと出力
 
@@ -81,4 +90,5 @@ uv run dabench run-benchmark --config configs/react_baseline.example.yaml
 python3 -m compileall src/data_agent_baseline
 uv run dabench status --config configs/react_baseline.example.yaml
 uv run dabench run-task task_1 --config configs/react_baseline.example.yaml
+uv run dabench submit-run --input-dir data/public/input --output-dir /tmp/dabench-output --logs-dir /tmp/dabench-logs --config configs/react_baseline.local.yaml --limit 1
 ```

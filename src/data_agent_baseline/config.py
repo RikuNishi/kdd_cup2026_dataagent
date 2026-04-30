@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -55,6 +56,8 @@ def _path_value(raw_value: str | None, default_value: Path) -> Path:
 
 
 def load_app_config(config_path: Path) -> AppConfig:
+    """YAML 設定ファイルを読み込み、アプリ設定として返す。"""
+
     payload = yaml.safe_load(config_path.read_text()) or {}
     dataset_defaults = DatasetConfig()
     agent_defaults = AgentConfig()
@@ -87,3 +90,26 @@ def load_app_config(config_path: Path) -> AppConfig:
         task_timeout_seconds=int(run_payload.get("task_timeout_seconds", run_defaults.task_timeout_seconds)),
     )
     return AppConfig(dataset=dataset_config, agent=agent_config, run=run_config)
+
+
+def apply_model_env_overrides(config: AppConfig) -> AppConfig:
+    """評価環境の MODEL_* 変数があれば agent 設定へ優先適用する。"""
+
+    model = os.getenv("MODEL_NAME", "").strip() or config.agent.model
+    api_base = os.getenv("MODEL_API_URL", "").strip() or config.agent.api_base
+    api_key = os.getenv("MODEL_API_KEY", "").strip() or config.agent.api_key
+    if (
+        model == config.agent.model
+        and api_base == config.agent.api_base
+        and api_key == config.agent.api_key
+    ):
+        return config
+
+    agent_config = AgentConfig(
+        model=model,
+        api_base=api_base,
+        api_key=api_key,
+        max_steps=config.agent.max_steps,
+        temperature=config.agent.temperature,
+    )
+    return AppConfig(dataset=config.dataset, agent=agent_config, run=config.run)
