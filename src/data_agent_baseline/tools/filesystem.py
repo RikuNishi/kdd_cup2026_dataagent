@@ -1,3 +1,5 @@
+"""タスクの `context/` 配下を参照するためのファイル操作ツール。"""
+
 from __future__ import annotations
 
 import csv
@@ -8,6 +10,8 @@ from data_agent_baseline.benchmark.schema import PublicTask
 
 
 def resolve_context_path(task: PublicTask, relative_path: str) -> Path:
+    """`context/` 配下の相対パスを解決し、ルート外への逸脱を防ぐ。"""
+
     candidate = (task.context_dir / relative_path).resolve()
     context_root = task.context_dir.resolve()
     if context_root not in candidate.parents and candidate != context_root:
@@ -18,6 +22,8 @@ def resolve_context_path(task: PublicTask, relative_path: str) -> Path:
 
 
 def list_context_tree(task: PublicTask, *, max_depth: int = 4) -> dict[str, object]:
+    """タスクの `context/` 配下にあるファイルとディレクトリを深さ制限付きで列挙する。"""
+
     entries: list[dict[str, object]] = []
 
     def walk(path: Path, depth: int) -> None:
@@ -43,6 +49,8 @@ def list_context_tree(task: PublicTask, *, max_depth: int = 4) -> dict[str, obje
 
 
 def read_csv_preview(task: PublicTask, relative_path: str, *, max_rows: int = 20) -> dict[str, object]:
+    """CSV のヘッダー、先頭行のプレビュー、および総データ行数を返す。"""
+
     path = resolve_context_path(task, relative_path)
     with path.open(newline="") as handle:
         reader = csv.reader(handle)
@@ -67,6 +75,8 @@ def read_csv_preview(task: PublicTask, relative_path: str, *, max_rows: int = 20
 
 
 def read_json_preview(task: PublicTask, relative_path: str, *, max_chars: int = 4000) -> dict[str, object]:
+    """整形済み JSON のプレビューを返し、必要に応じて文字数で切り詰める。"""
+
     path = resolve_context_path(task, relative_path)
     payload = json.loads(path.read_text())
     preview = json.dumps(payload, ensure_ascii=False, indent=2)
@@ -78,6 +88,8 @@ def read_json_preview(task: PublicTask, relative_path: str, *, max_chars: int = 
 
 
 def read_doc_preview(task: PublicTask, relative_path: str, *, max_chars: int = 4000) -> dict[str, object]:
+    """テキスト系ドキュメントの先頭プレビューを返す。"""
+
     path = resolve_context_path(task, relative_path)
     text = path.read_text(errors="replace")
     return {

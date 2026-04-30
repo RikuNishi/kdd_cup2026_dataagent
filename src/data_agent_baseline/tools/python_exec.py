@@ -1,3 +1,5 @@
+"""`execute_python` ツールで使う Python 実行ヘルパー。"""
+
 from __future__ import annotations
 
 import contextlib
@@ -13,6 +15,8 @@ from typing import Any
 
 @contextlib.contextmanager
 def _capture_process_streams(stdout_path: Path, stderr_path: Path):
+    """子プロセスの標準出力と標準エラー出力を一時ファイルへリダイレクトする。"""
+
     original_stdout = sys.stdout
     original_stderr = sys.stderr
     saved_stdout_fd = os.dup(1)
@@ -66,6 +70,8 @@ def _capture_process_streams(stdout_path: Path, stderr_path: Path):
 
 
 def _read_captured_stream(path: Path) -> str:
+    """キャプチャした出力を、不正なバイトを置換しながら読み込む。"""
+
     return path.read_text(encoding="utf-8", errors="replace")
 
 
@@ -76,6 +82,8 @@ def _run_python_code(
     stderr_path: str,
     queue: multiprocessing.Queue[Any],
 ) -> None:
+    """子プロセスでコードを実行し、結果をキュー経由で親へ返す。"""
+
     namespace: dict[str, Any] = {
         "__builtins__": __builtins__,
         "__name__": "__main__",
@@ -101,6 +109,8 @@ def _run_python_code(
 
 
 def execute_python_code(context_root: Path, code: str, *, timeout_seconds: int = 30) -> dict[str, Any]:
+    """タスクの `context/` 内で Python コードを実行し、出力とエラーを回収する。"""
+
     resolved_context_root = context_root.resolve()
     with tempfile.TemporaryDirectory() as temp_dir:
         stdout_path = Path(temp_dir) / "stdout.txt"

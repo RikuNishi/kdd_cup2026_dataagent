@@ -1,3 +1,5 @@
+"""ベースラインエージェント向けのツール登録とプロンプト用メタデータ。"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -19,6 +21,8 @@ EXECUTE_PYTHON_TIMEOUT_SECONDS = 30
 
 @dataclass(frozen=True, slots=True)
 class ToolSpec:
+    """ReAct エージェントに公開するツール定義。"""
+
     name: str
     description: str
     input_schema: dict[str, Any]
@@ -26,6 +30,8 @@ class ToolSpec:
 
 @dataclass(frozen=True, slots=True)
 class ToolExecutionResult:
+    """ツールハンドラが返す実行結果の共通形式。"""
+
     ok: bool
     content: dict[str, Any]
     is_terminal: bool = False
@@ -36,34 +42,46 @@ ToolHandler = Callable[[PublicTask, dict[str, Any]], ToolExecutionResult]
 
 
 def _list_context(task: PublicTask, action_input: dict[str, Any]) -> ToolExecutionResult:
+    """`context/` 配下の一覧取得リクエストを処理する。"""
+
     max_depth = int(action_input.get("max_depth", 4))
     return ToolExecutionResult(ok=True, content=list_context_tree(task, max_depth=max_depth))
 
 
 def _read_csv(task: PublicTask, action_input: dict[str, Any]) -> ToolExecutionResult:
+    """CSV プレビュー取得リクエストを処理する。"""
+
     path = str(action_input["path"])
     max_rows = int(action_input.get("max_rows", 20))
     return ToolExecutionResult(ok=True, content=read_csv_preview(task, path, max_rows=max_rows))
 
 
 def _read_json(task: PublicTask, action_input: dict[str, Any]) -> ToolExecutionResult:
+    """JSON プレビュー取得リクエストを処理する。"""
+
     path = str(action_input["path"])
     max_chars = int(action_input.get("max_chars", 4000))
     return ToolExecutionResult(ok=True, content=read_json_preview(task, path, max_chars=max_chars))
 
 
 def _read_doc(task: PublicTask, action_input: dict[str, Any]) -> ToolExecutionResult:
+    """テキスト文書のプレビュー取得リクエストを処理する。"""
+
     path = str(action_input["path"])
     max_chars = int(action_input.get("max_chars", 4000))
     return ToolExecutionResult(ok=True, content=read_doc_preview(task, path, max_chars=max_chars))
 
 
 def _inspect_sqlite_schema(task: PublicTask, action_input: dict[str, Any]) -> ToolExecutionResult:
+    """SQLite スキーマ確認リクエストを処理する。"""
+
     path = resolve_context_path(task, str(action_input["path"]))
     return ToolExecutionResult(ok=True, content=inspect_sqlite_schema(path))
 
 
 def _execute_context_sql(task: PublicTask, action_input: dict[str, Any]) -> ToolExecutionResult:
+    """読み取り専用 SQL 実行リクエストを処理する。"""
+
     path = resolve_context_path(task, str(action_input["path"]))
     sql = str(action_input["sql"])
     limit = int(action_input.get("limit", 200))
@@ -71,6 +89,8 @@ def _execute_context_sql(task: PublicTask, action_input: dict[str, Any]) -> Tool
 
 
 def _execute_python(task: PublicTask, action_input: dict[str, Any]) -> ToolExecutionResult:
+    """Python 実行リクエストを処理する。"""
+
     code = str(action_input["code"])
     content = execute_python_code(
         context_root=task.context_dir,
@@ -81,6 +101,8 @@ def _execute_python(task: PublicTask, action_input: dict[str, Any]) -> ToolExecu
 
 
 def _answer(_: PublicTask, action_input: dict[str, Any]) -> ToolExecutionResult:
+    """最終回答テーブルを検証し、提出結果として返す。"""
+
     columns = action_input.get("columns")
     rows = action_input.get("rows")
     if not isinstance(columns, list) or not columns or not all(isinstance(item, str) for item in columns):
@@ -111,10 +133,14 @@ def _answer(_: PublicTask, action_input: dict[str, Any]) -> ToolExecutionResult:
 
 @dataclass(slots=True)
 class ToolRegistry:
+    """ツール定義と実行ハンドラを保持するレジストリ。"""
+
     specs: dict[str, ToolSpec]
     handlers: dict[str, ToolHandler]
 
     def describe_for_prompt(self) -> str:
+        """エージェント用プロンプトに埋め込む説明文へ整形する。"""
+
         lines = []
         for name in sorted(self.specs):
             spec = self.specs[name]
@@ -123,16 +149,23 @@ class ToolRegistry:
         return "\n".join(lines)
 
     def execute(self, task: PublicTask, action: str, action_input: dict[str, Any]) -> ToolExecutionResult:
+        """ツール名に対応するハンドラを実行する。"""
+
         if action not in self.handlers:
             raise KeyError(f"Unknown tool: {action}")
         return self.handlers[action](task, action_input)
 
 
 def create_default_tool_registry() -> ToolRegistry:
+    """ベンチマークエージェントに公開する標準ツール群を構築する。"""
+
     specs = {
         "answer": ToolSpec(
             name="answer",
-            description="Submit the final answer table. This is the only valid terminating action.",
+            description=(
+                "最終回答テーブルを提出してタスクを終了します。"
+                "予測を確定できる段階でのみ使用します。"
+            ),
             input_schema={
                 "columns": ["column_name"],
                 "rows": [["value_1"]],
@@ -140,15 +173,18 @@ def create_default_tool_registry() -> ToolRegistry:
         ),
         "execute_context_sql": ToolSpec(
             name="execute_context_sql",
-            description="Run a read-only SQL query against a sqlite/db file inside context.",
+            description=(
+                "`context/` 内の sqlite/db ファイルに対して読み取り専用 SQL を実行します。"
+                "使用できるのは SELECT / WITH / PRAGMA 文のみです。"
+            ),
             input_schema={"path": "relative/path/to/file.sqlite", "sql": "SELECT ...", "limit": 200},
         ),
         "execute_python": ToolSpec(
             name="execute_python",
             description=(
-                "Execute arbitrary Python code with the task context directory as the "
-                "working directory. The tool returns the code's captured stdout as `output`. "
-                f"The execution timeout is fixed at {EXECUTE_PYTHON_TIMEOUT_SECONDS} seconds."
+                "タスクの `context/` ディレクトリを作業ディレクトリとして任意の Python コードを実行します。"
+                "標準出力は `output`、標準エラー出力は `stderr` に入ります。"
+                f"実行タイムアウトは {EXECUTE_PYTHON_TIMEOUT_SECONDS} 秒です。"
             ),
             input_schema={
                 "code": "import os\nprint(sorted(os.listdir('.')))",
@@ -156,27 +192,42 @@ def create_default_tool_registry() -> ToolRegistry:
         ),
         "inspect_sqlite_schema": ToolSpec(
             name="inspect_sqlite_schema",
-            description="Inspect tables and columns in a sqlite/db file inside context.",
+            description=(
+                "`context/` 内の sqlite/db ファイルのスキーマを確認し、"
+                "ユーザー定義テーブルと CREATE 文を返します。"
+            ),
             input_schema={"path": "relative/path/to/file.sqlite"},
         ),
         "list_context": ToolSpec(
             name="list_context",
-            description="List files and directories available under context.",
+            description=(
+                "`context/` 配下にあるファイルとディレクトリを、"
+                "指定した深さまで列挙します。返されるパスは `context/` からの相対パスです。"
+            ),
             input_schema={"max_depth": 4},
         ),
         "read_csv": ToolSpec(
             name="read_csv",
-            description="Read a preview of a CSV file inside context.",
+            description=(
+                "`context/` 内の CSV ファイルを読み込み、"
+                "ヘッダー、先頭行のプレビュー、総行数を返します。"
+            ),
             input_schema={"path": "relative/path/to/file.csv", "max_rows": 20},
         ),
         "read_doc": ToolSpec(
             name="read_doc",
-            description="Read a text-like document inside context.",
+            description=(
+                "`context/` 内のテキスト系ドキュメントのプレビューを返します。"
+                "大きいファイルは最大文字数で切り詰められます。"
+            ),
             input_schema={"path": "relative/path/to/file.md", "max_chars": 4000},
         ),
         "read_json": ToolSpec(
             name="read_json",
-            description="Read a preview of a JSON file inside context.",
+            description=(
+                "`context/` 内の JSON ファイルを整形してプレビュー表示します。"
+                "大きい内容は最大文字数で切り詰められます。"
+            ),
             input_schema={"path": "relative/path/to/file.json", "max_chars": 4000},
         ),
     }

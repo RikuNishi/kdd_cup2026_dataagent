@@ -1,3 +1,5 @@
+"""ベースライン用ツールレジストリの公開エクスポート。"""
+
 from data_agent_baseline.tools.registry import (
     ToolExecutionResult,
     ToolRegistry,

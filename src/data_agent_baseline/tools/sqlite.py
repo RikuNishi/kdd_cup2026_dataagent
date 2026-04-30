@@ -1,3 +1,5 @@
+"""SQLite ファイルのスキーマ確認と読み取り専用クエリ実行を行うツール。"""
+
 from __future__ import annotations
 
 import sqlite3
@@ -5,11 +7,15 @@ from pathlib import Path
 
 
 def _connect_read_only(path: Path) -> sqlite3.Connection:
+    """SQLite データベースを読み取り専用モードで開く。"""
+
     uri = f"file:{path.resolve().as_posix()}?mode=ro"
     return sqlite3.connect(uri, uri=True)
 
 
 def inspect_sqlite_schema(path: Path) -> dict[str, object]:
+    """ユーザー定義テーブル名と CREATE TABLE 文を返す。"""
+
     with _connect_read_only(path) as conn:
         rows = conn.execute(
             """
@@ -34,6 +40,8 @@ def inspect_sqlite_schema(path: Path) -> dict[str, object]:
 
 
 def execute_read_only_sql(path: Path, sql: str, *, limit: int = 200) -> dict[str, object]:
+    """読み取り専用 SQL を実行し、件数制限付きの結果プレビューを返す。"""
+
     normalized_sql = sql.lstrip().lower()
     if not normalized_sql.startswith(("select", "with", "pragma")):
         raise ValueError("Only read-only SQL statements are allowed.")
