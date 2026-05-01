@@ -33,11 +33,15 @@ class OpenAIModelAdapter:
         api_base: str,
         api_key: str,
         temperature: float,
+        request_timeout_seconds: float = 120.0,
+        max_retries: int = 2,
     ) -> None:
         self.model = model
         self.api_base = api_base.rstrip("/")
         self.api_key = api_key
         self.temperature = temperature
+        self.request_timeout_seconds = request_timeout_seconds
+        self.max_retries = max_retries
 
     def complete(self, messages: list[ModelMessage]) -> str:
         if not self.api_key:
@@ -46,6 +50,8 @@ class OpenAIModelAdapter:
         client = OpenAI(
             api_key=self.api_key,
             base_url=self.api_base,
+            timeout=self.request_timeout_seconds,
+            max_retries=self.max_retries,
         )
 
         try:

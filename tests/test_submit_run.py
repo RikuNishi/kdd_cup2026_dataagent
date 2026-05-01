@@ -80,6 +80,8 @@ def test_model_env_overrides_take_precedence(monkeypatch) -> None:
     assert updated.agent.api_key == "eval-key"
     assert updated.agent.model == "qwen3.5-35b-a3b"
     assert updated.agent.max_steps == config.agent.max_steps
+    assert updated.agent.request_timeout_seconds == config.agent.request_timeout_seconds
+    assert updated.agent.max_retries == config.agent.max_retries
 
 
 def test_submit_run_writes_prediction_to_output_and_trace_to_logs(tmp_path: Path) -> None:

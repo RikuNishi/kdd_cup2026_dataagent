@@ -29,6 +29,8 @@ class AgentConfig:
     api_key: str = ""
     max_steps: int = 16
     temperature: float = 0.0
+    request_timeout_seconds: float = 120.0
+    max_retries: int = 2
 
 
 @dataclass(frozen=True, slots=True)
@@ -76,6 +78,13 @@ def load_app_config(config_path: Path) -> AppConfig:
         api_key=str(agent_payload.get("api_key", agent_defaults.api_key)),
         max_steps=int(agent_payload.get("max_steps", agent_defaults.max_steps)),
         temperature=float(agent_payload.get("temperature", agent_defaults.temperature)),
+        request_timeout_seconds=float(
+            agent_payload.get(
+                "request_timeout_seconds",
+                agent_defaults.request_timeout_seconds,
+            )
+        ),
+        max_retries=int(agent_payload.get("max_retries", agent_defaults.max_retries)),
     )
     raw_run_id = run_payload.get("run_id")
     run_id = run_defaults.run_id
@@ -111,5 +120,7 @@ def apply_model_env_overrides(config: AppConfig) -> AppConfig:
         api_key=api_key,
         max_steps=config.agent.max_steps,
         temperature=config.agent.temperature,
+        request_timeout_seconds=config.agent.request_timeout_seconds,
+        max_retries=config.agent.max_retries,
     )
     return AppConfig(dataset=config.dataset, agent=agent_config, run=config.run)

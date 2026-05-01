@@ -12,9 +12,21 @@
 
 > KDD Cup 2026 DataAgent-Bench チャレンジ向けのスターターキットです。公開デモデータセットを読み込み、各タスクの `prediction.csv` と実行ログを生成します。
 
+## v2 改善結果メモ
+
+`baseline_results/dabench-output` と v2 実行結果 `dabench-output` を、公開デモの `data/public/output` に対してローカル近似評価した比較です。hidden test の公式スコアそのものではありません。
+
+| run | scored | missing | average_score | average_recall |
+| --- | ---: | ---: | ---: | ---: |
+| baseline_results | 42/50 | 8 | 0.527500 | 0.533333 |
+| v2 `dabench-output` | 43/50 | 7 | 0.610000 | 0.613333 |
+| 差分 | +1 | -1 | +0.082500 | +0.080000 |
+
+主な改善は、`task_19`, `task_22`, `task_38`, `task_243`, `task_350`, `task_408` が 0 点から 1.0 へ改善したことです。一方で `task_11`, `task_86` は 1.0 から 0 点へ悪化しており、次の優先確認対象です。
+
 ## 概要
 
-このリポジトリは、DataAgent-Bench のタスクを ReAct 型 agent で解くための最小構成です。agent は各 `task_<id>/task.json` の質問を読み、同じタスクの `context/` 配下にある CSV、JSON、SQLite、Markdown 等をツール経由で確認し、最終回答を `prediction.csv` として出力します。
+このリポジトリは、DataAgent-Bench のタスクを ReAct 型 agent で解くためのベースラインです。v2 では ReAct ループに加えて、context profile、文書 retrieval、DuckDB 横断クエリ、answer 検査を標準ツール化しています。agent は各 `task_<id>/task.json` の質問を読み、同じタスクの `context/` 配下にある CSV、JSON、SQLite、Markdown 等をツール経由で確認し、最終回答を `prediction.csv` として出力します。
 
 | 項目 | 内容 |
 | --- | --- |
@@ -57,6 +69,8 @@
    ```
 
 5. `configs/react_baseline.local.yaml` の `agent.model`, `agent.api_base`, `agent.api_key` をローカル検証用の OpenAI 互換 API に合わせます。必要に応じて `agent.request_timeout_seconds` と `agent.max_retries` も調整します。
+
+   `run.max_workers` は既定で `4` です。モデル API が詰まりやすい場合は `2`、十分安定している場合は `8` などへ調整してください。
 
 ## ローカル実行
 
@@ -190,6 +204,8 @@ Sharing link: <Google Drive link>
 
 | 日付 | 内容 |
 | --- | --- |
+| 2026-05-01 | v2 実行結果を `baseline_results` と公開 gold で比較し、平均 score が `0.527500` から `0.610000` へ改善したことを記録。 |
+| 2026-05-01 | v2 構造刷新として `profile_context`、`retrieve_context`、`execute_data_query`、`validate_answer` を実装し、難易度別 prompt、config の timeout/retry、既定 `max_workers=4` を整備。 |
 | 2026-05-01 | 提出用 Team ID を `1560` に更新し、Docker image tag、archive 名、メール提出例を `1560` 形式へ変更。 |
 | 2026-04-30 | 公開デモ dataset の Google Drive ダウンロードリンクと配置先を導入手順に追記。 |
 | 2026-04-30 | README を概要・導入・ローカル実行・評価・提出手順中心に整理し、詳細な tool/module 説明を docs 参照へ移動。 |

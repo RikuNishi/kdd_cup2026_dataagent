@@ -86,3 +86,44 @@ def test_tool_descriptions_render_json_examples() -> None:
 
     assert "action_input JSON example" in descriptions
     assert '"code": "import os\\nprint(sorted(os.listdir(\'.\')))"' in descriptions
+
+
+def test_agent_v2_tool_flow_profiles_queries_validates_and_answers(tmp_path: Path) -> None:
+    task = _task(tmp_path)
+    csv_dir = task.context_dir / "csv"
+    csv_dir.mkdir()
+    (csv_dir / "value_scores.csv").write_text("name,score\nAda,10\nLin,20\n", encoding="utf-8")
+    responses = [
+        '{"thought":"profile first","action":"profile_context","action_input":{}}',
+        (
+            '{"thought":"query structured data","action":"execute_data_query",'
+            '"action_input":{"sources":["csv/value_scores.csv"],'
+            '"sql":"SELECT name FROM value_scores ORDER BY score DESC LIMIT 1","limit":10}}'
+        ),
+        (
+            '{"thought":"validate candidate","action":"validate_answer",'
+            '"action_input":{"columns":["name"],"rows":[["Lin"]],"notes":"Top score is unique."}}'
+        ),
+        (
+            '{"thought":"submit","action":"answer",'
+            '"action_input":{"columns":["name"],"rows":[["Lin"]]}}'
+        ),
+    ]
+    model = RecordingModelAdapter(responses)
+    agent = ReActAgent(
+        model=model,
+        tools=create_default_tool_registry(),
+        config=ReActAgentConfig(max_steps=4),
+    )
+
+    result = agent.run(task)
+
+    assert result.succeeded
+    assert [step.action for step in result.steps] == [
+        "profile_context",
+        "execute_data_query",
+        "validate_answer",
+        "answer",
+    ]
+    assert result.answer is not None
+    assert result.answer.rows == [["Lin"]]

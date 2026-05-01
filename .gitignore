@@ -41,3 +41,4 @@ configs/*
 
 # baselineの結果
 baseline_results/*
+v2_results/*

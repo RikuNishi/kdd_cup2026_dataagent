@@ -1,16 +1,17 @@
 # agents コード概要
 
-`src/data_agent_baseline/agents/` は、ReAct 形式でモデルにツールを使わせ、最終回答を作るための実行基盤です。タスク本文、ツール説明、過去の観測結果をプロンプトにまとめ、モデル出力を JSON として解釈してツールを実行します。
+`src/data_agent_baseline/agents/` は、ReAct 形式でモデルにツールを使わせ、最終回答を作るための実行基盤です。v2 では素の逐次 ReAct に加えて、`profile_context`、`retrieve_context`、`execute_data_query`、`validate_answer` を標準ツール化し、context scan、文書検索、横断クエリ、回答検査を明示的な手順として扱います。
 
 ## 全体フロー
 
 1. `runner.py` が `OpenAIModelAdapter`、`ToolRegistry`、`ReActAgent` を組み立てる。
 2. `ReActAgent.run()` がタスクごとに実行状態を初期化する。
-3. `_build_messages()` が system prompt、難易度別 strategy を含む task prompt、過去ステップの observation を会話履歴に変換する。
+3. `_build_messages()` が system prompt、難易度別 strategy、v2 tool workflow を含む task prompt、過去ステップの observation を会話履歴に変換する。
 4. `ModelAdapter.complete()` でモデルから次の行動を受け取る。
 5. `parse_model_step()` がモデル応答から `thought`, `action`, `action_input` を取り出す。
 6. `ToolRegistry.execute()` が指定ツールを実行し、結果を observation として保存する。
-7. `answer` ツールが呼ばれるか、`max_steps` に到達するまで繰り返す。
+7. 通常は `profile_context -> retrieve/query -> validate_answer -> answer` の順に進む。
+8. `answer` ツールが呼ばれるか、`max_steps` に到達するまで繰り返す。
 
 ## 現在の処理フロー
 
@@ -102,6 +103,16 @@ flowchart TD
 
 `max_steps` 以内に `answer` が呼ばれなかった場合は、`failure_reason` に `"Agent did not submit an answer within max_steps."` が入ります。
 
+### v2 の solver 方針
+
+v2 は agent loop 自体を大きく分岐させず、モデルに公開するツールと prompt で solver 方針を固定します。
+
+- Easy: `profile_context` の後、CSV/JSON を `execute_python` または `execute_data_query` で処理する。
+- Medium: SQLite schema と CSV/JSON schema を先に見て、DB 単体は `execute_context_sql`、横断 join は `execute_data_query` を使う。
+- Hard/Extreme: `retrieve_context` で `knowledge.md` と `doc/*.md` から関連 chunk を集めてから、構造データの query と計算に進む。
+
+`knowledge.md` は `context/knowledge.md` 直下を標準として扱います。存在しない `doc/knowledge.md` などのパスを決め打ちしないよう、system prompt と `profile_context` の `path_rules` で明示しています。
+
 ## ファイル別の役割
 
 ### `model.py`
@@ -157,11 +168,13 @@ ReAct の実行ループを担当する中心モジュールです。
 `tools/registry.py` でモデルに公開する tool を登録します。
 
 - `list_context`: `context/` 配下のファイル一覧を取得する。
+- `profile_context`: task の難易度、質問、存在ファイル、modality、CSV header/row count、JSON shape、SQLite schema、文書見出し、`knowledge.md` 位置をまとめて返す。
+- `retrieve_context`: `knowledge.md` と `doc/*.md` から、質問・キーワードに関連する chunk を返す。
 - `read_csv`, `read_json`, `read_doc`: CSV/JSON/テキストのプレビューを取得する。
 - `inspect_sqlite_schema`, `execute_context_sql`: SQLite schema 確認と読み取り SQL 実行を行う。
-- `execute_data_query`: CSV/TSV/JSON/SQLite を DuckDB 上に登録し、横断 SQL で join・集計・ranking を行う。CSV は型推論し、単一 table の SQLite は元 table 名に加えて source alias でも参照できる。
+- `execute_data_query`: CSV/JSON/SQLite を DuckDB 上に登録し、横断 SQL で join・集計・ranking を行う。JSON は `records` wrapper を table 化し、単一 table の SQLite は table 名で参照できる view も作る。
 - `execute_python`: `context/` 配下を working directory として Python を実行する。
-- `validate_answer`: 最終回答前に余分列、結合済み名前、tie、集計式のリスクを確認する。
+- `validate_answer`: 最終回答前に shape error、空回答、余分列、tie、複数行取りこぼし、数値表記のリスクを確認する。
 - `answer`: 最終回答 table を提出して task を終了する。
 
 ## 主要な入出力

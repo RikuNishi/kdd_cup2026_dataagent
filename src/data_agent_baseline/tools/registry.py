@@ -7,6 +7,9 @@ from dataclasses import dataclass
 from typing import Any, Callable
 
 from data_agent_baseline.benchmark.schema import AnswerTable, PublicTask
+from data_agent_baseline.tools.answer_validation import validate_answer_table
+from data_agent_baseline.tools.context_profile import build_context_profile, retrieve_context_chunks
+from data_agent_baseline.tools.data_query import execute_data_query
 from data_agent_baseline.tools.filesystem import (
     list_context_tree,
     read_csv_preview,
@@ -101,6 +104,57 @@ def _execute_python(task: PublicTask, action_input: dict[str, Any]) -> ToolExecu
     return ToolExecutionResult(ok=bool(content.get("success")), content=content)
 
 
+def _profile_context(task: PublicTask, _: dict[str, Any]) -> ToolExecutionResult:
+    """context profile 取得リクエストを処理する。"""
+
+    return ToolExecutionResult(ok=True, content=build_context_profile(task))
+
+
+def _retrieve_context(task: PublicTask, action_input: dict[str, Any]) -> ToolExecutionResult:
+    """文書 chunk 検索リクエストを処理する。"""
+
+    query = str(action_input.get("query") or task.question)
+    raw_keywords = action_input.get("keywords")
+    keywords = [str(item) for item in raw_keywords] if isinstance(raw_keywords, list) else None
+    max_chunks = int(action_input.get("max_chunks", 5))
+    max_chars_per_chunk = int(action_input.get("max_chars_per_chunk", 2000))
+    return ToolExecutionResult(
+        ok=True,
+        content=retrieve_context_chunks(
+            task,
+            query=query,
+            keywords=keywords,
+            max_chunks=max_chunks,
+            max_chars_per_chunk=max_chars_per_chunk,
+        ),
+    )
+
+
+def _execute_data_query(task: PublicTask, action_input: dict[str, Any]) -> ToolExecutionResult:
+    """DuckDB 横断クエリリクエストを処理する。"""
+
+    sql = str(action_input["sql"])
+    raw_sources = action_input.get("sources")
+    sources = [str(item) for item in raw_sources] if isinstance(raw_sources, list) else None
+    limit = int(action_input.get("limit", 200))
+    return ToolExecutionResult(
+        ok=True,
+        content=execute_data_query(task, sql=sql, sources=sources, limit=limit),
+    )
+
+
+def _validate_answer(task: PublicTask, action_input: dict[str, Any]) -> ToolExecutionResult:
+    """最終回答候補の検査リクエストを処理する。"""
+
+    content = validate_answer_table(
+        task,
+        columns=action_input.get("columns"),
+        rows=action_input.get("rows"),
+        notes=str(action_input.get("notes", "")),
+    )
+    return ToolExecutionResult(ok=bool(content["ok"]), content=content)
+
+
 def _answer(_: PublicTask, action_input: dict[str, Any]) -> ToolExecutionResult:
     """最終回答テーブルを検証し、提出結果として返す。"""
 
@@ -177,9 +231,25 @@ def create_default_tool_registry() -> ToolRegistry:
             name="execute_context_sql",
             description=(
                 "Run read-only SQL against a sqlite/db file inside `context/`. "
+                "Only use this for .db, .sqlite, or .sqlite3 files. "
+                "For CSV/JSON joins, prefer execute_data_query or execute_python. "
                 "Only SELECT, WITH, and PRAGMA statements are allowed."
             ),
             input_schema={"path": "relative/path/to/file.sqlite", "sql": "SELECT ...", "limit": 200},
+        ),
+        "execute_data_query": ToolSpec(
+            name="execute_data_query",
+            description=(
+                "Register selected CSV, JSON, and SQLite files from `context/` in DuckDB and "
+                "run a read-only SQL query across them. If sources is omitted, all structured "
+                "CSV/JSON/SQLite files are registered. Use the returned registered_sources "
+                "metadata to repair table or alias names."
+            ),
+            input_schema={
+                "sources": ["csv/example.csv", "json/example.json", "db/example.db"],
+                "sql": "SELECT * FROM example LIMIT 5",
+                "limit": 200,
+            },
         ),
         "execute_python": ToolSpec(
             name="execute_python",
@@ -199,6 +269,15 @@ def create_default_tool_registry() -> ToolRegistry:
                 "returning user-defined tables and their CREATE statements."
             ),
             input_schema={"path": "relative/path/to/file.sqlite"},
+        ),
+        "profile_context": ToolSpec(
+            name="profile_context",
+            description=(
+                "Build a deterministic profile of the task context before planning: files, "
+                "modalities, CSV columns, JSON shape, SQLite schemas, document headings, "
+                "knowledge.md location, and a difficulty-aware strategy."
+            ),
+            input_schema={},
         ),
         "list_context": ToolSpec(
             name="list_context",
@@ -224,6 +303,20 @@ def create_default_tool_registry() -> ToolRegistry:
             ),
             input_schema={"path": "relative/path/to/file.md", "max_chars": 4000},
         ),
+        "retrieve_context": ToolSpec(
+            name="retrieve_context",
+            description=(
+                "Retrieve relevant chunks from context/knowledge.md and doc/*.md using the "
+                "question or explicit keywords. Use this before solving hard/extreme tasks "
+                "or when business definitions, value ranges, or terminology are needed."
+            ),
+            input_schema={
+                "query": "question or search phrase",
+                "keywords": ["optional", "terms"],
+                "max_chunks": 5,
+                "max_chars_per_chunk": 2000,
+            },
+        ),
         "read_json": ToolSpec(
             name="read_json",
             description=(
@@ -232,15 +325,32 @@ def create_default_tool_registry() -> ToolRegistry:
             ),
             input_schema={"path": "relative/path/to/file.json", "max_chars": 4000},
         ),
+        "validate_answer": ToolSpec(
+            name="validate_answer",
+            description=(
+                "Validate the candidate final answer table before calling answer. It checks "
+                "shape errors and warns about empty answers, likely extra columns, possible "
+                "tie/multiple-row omissions, and numeric formatting risks."
+            ),
+            input_schema={
+                "columns": ["column_name"],
+                "rows": [["value_1"]],
+                "notes": "brief evidence or tie/aggregation check",
+            },
+        ),
     }
     handlers = {
         "answer": _answer,
         "execute_context_sql": _execute_context_sql,
+        "execute_data_query": _execute_data_query,
         "execute_python": _execute_python,
         "inspect_sqlite_schema": _inspect_sqlite_schema,
         "list_context": _list_context,
+        "profile_context": _profile_context,
         "read_csv": _read_csv,
         "read_doc": _read_doc,
         "read_json": _read_json,
+        "retrieve_context": _retrieve_context,
+        "validate_answer": _validate_answer,
     }
     return ToolRegistry(specs=specs, handlers=handlers)
