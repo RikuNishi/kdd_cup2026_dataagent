@@ -15,11 +15,11 @@
 | --- | --- |
 | Docker image 名 | `<team_id>:v<N>` |
 | archive ファイル名 | `<team_id>_v<N>.tar.gz` |
-| 例 | `team0042:v3`, `team0042_v3.tar.gz` |
+| この repo の例 | `1560:v1`, `1560_v1.tar.gz` |
 
 注意点:
 
-- `<team_id>` は主催者から割り当てられる ID を使う。
+- `<team_id>` は主催者から割り当てられる ID を使う。この repo では `1560` を使う。
 - `<N>` は提出ごとに 1 から増やす。過去に使った version は再利用しない。
 - archive 名は image tag と対応させる。
 - image は `ENTRYPOINT` または `CMD` を持ち、`docker run` だけで実行できる必要がある。
@@ -122,7 +122,7 @@ timeout、OOM、non-zero exit が起きた場合でも、それまでに生成�
 1. `submit-run` をローカル疑似評価で実行し、`/output/task_<id>/prediction.csv` と `/logs/runtime.log` が生成されることを確認する。
 2. Docker image を build し、`docker run` だけで `submit-run` が始まることを確認する。
 3. 小さいタスク数で Docker 実行を検証し、`prediction.csv` が公式仕様どおり出ることを確認する。
-4. team ID が確定したら、提出用 tag と archive 名で image を export する。
+4. 提出用 tag `1560:v<N>` と archive 名 `1560_v<N>.tar.gz` で image を export する。
 
 ## ローカル疑似評価
 
@@ -149,7 +149,7 @@ uv run dabench submit-run \
 提出前の build 例:
 
 ```bash
-docker build -t <team_id>:v1 .
+docker build -t 1560:v1 .
 ```
 
 疑似評価の実行例:
@@ -162,13 +162,13 @@ docker run --rm \
   -e MODEL_API_URL="$MODEL_API_URL" \
   -e MODEL_API_KEY="$MODEL_API_KEY" \
   -e MODEL_NAME="qwen3.5-35b-a3b" \
-  <team_id>:v1
+  1560:v1
 ```
 
 提出用 archive の作成例:
 
 ```bash
-docker save <team_id>:v1 | gzip > <team_id>_v1.tar.gz
+docker save 1560:v1 | gzip > 1560_v1.tar.gz
 ```
 
-archive 作成後は、ファイル名が `<team_id>_v<N>.tar.gz` 形式になっていることを確認してください。
+archive 作成後は、ファイル名が `1560_v<N>.tar.gz` 形式になっていることを確認してください。

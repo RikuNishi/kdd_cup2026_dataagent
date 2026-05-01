@@ -22,7 +22,7 @@
 | 公開デモ正解 | `data/public/output/task_<id>/gold.csv` |
 | 通常実行出力 | `artifacts/runs/<run_id>/<task_id>/` |
 | 提出形式 | Docker image archive |
-| Team ID | `SumRTA` |
+| Team ID | `1560` |
 
 詳細:
 
@@ -56,7 +56,7 @@
    cp configs/react_baseline.example.yaml configs/react_baseline.local.yaml
    ```
 
-5. `configs/react_baseline.local.yaml` の `agent.model`, `agent.api_base`, `agent.api_key` をローカル検証用の OpenAI 互換 API に合わせます。
+5. `configs/react_baseline.local.yaml` の `agent.model`, `agent.api_base`, `agent.api_key` をローカル検証用の OpenAI 互換 API に合わせます。必要に応じて `agent.request_timeout_seconds` と `agent.max_retries` も調整します。
 
 ## ローカル実行
 
@@ -105,24 +105,24 @@ uv run dabench evaluate-run \
 
 公式提出は `prediction.csv` 単体ではなく、Docker image archive です。評価環境では `/input`, `/output`, `/logs` が mount され、`MODEL_API_URL`, `MODEL_API_KEY`, `MODEL_NAME` が注入されます。この実装は `submit-run` でそれらを読み、評価時は主催側 Qwen `qwen3.5-35b-a3b` に接続します。
 
-Docker の repository name は小文字必須です。Team ID は `SumRTA` ですが、image tag は `sumrta:v<N>`、archive 名とメール上の Team ID は `SumRTA` を使います。
+提出用の Team ID は `1560` です。Docker image tag、archive 名、メール上の Team ID はすべて `1560` を使います。
 
 ```text
-Docker image tag: sumrta:v1
-Archive filename: SumRTA_v1.tar.gz
-Team ID in email: SumRTA
+Docker image tag: 1560:v1
+Archive filename: 1560_v1.tar.gz
+Team ID in email: 1560
 ```
 
 ### 1. Docker image を build
 
 ```bash
-docker build -t sumrta:v1 .
+docker build -t 1560:v1 .
 ```
 
 entrypoint 確認:
 
 ```bash
-docker image inspect sumrta:v1 \
+docker image inspect 1560:v1 \
   --format '{{json .Config.Entrypoint}}'
 ```
 
@@ -151,7 +151,7 @@ docker run --rm \
   -e MODEL_API_URL="$MODEL_API_URL" \
   -e MODEL_API_KEY="$MODEL_API_KEY" \
   -e MODEL_NAME="$MODEL_NAME" \
-  sumrta:v1 --limit 1
+  1560:v1 --limit 1
 ```
 
 確認項目:
@@ -165,19 +165,19 @@ docker run --rm \
 ### 3. 提出用 archive を作成
 
 ```bash
-docker save sumrta:v1 | gzip > SumRTA_v1.tar.gz
-ls -lh SumRTA_v1.tar.gz
+docker save 1560:v1 | gzip > 1560_v1.tar.gz
+ls -lh 1560_v1.tar.gz
 ```
 
 archive は 10GB 以下にしてください。
 
 ### 4. Google Drive 経由で提出
 
-`SumRTA_v1.tar.gz` を Google Drive にアップロードし、「リンクを知っている全員が閲覧可」に設定してから、公式 Rules の形式でメール提出します。
+`1560_v1.tar.gz` を Google Drive にアップロードし、「リンクを知っている全員が閲覧可」に設定してから、公式 Rules の形式でメール提出します。
 
 ```text
-Subject: [KDDCup2026 Data Agents] Submission - SumRTA - v1
-Team ID: SumRTA
+Subject: [KDDCup2026 Data Agents] Submission - 1560 - v1
+Team ID: 1560
 Version: v1
 Sharing link: <Google Drive link>
 ```
@@ -190,12 +190,16 @@ Sharing link: <Google Drive link>
 
 | 日付 | 内容 |
 | --- | --- |
+| 2026-05-01 | 提出用 Team ID を `1560` に更新し、Docker image tag、archive 名、メール提出例を `1560` 形式へ変更。 |
 | 2026-04-30 | 公開デモ dataset の Google Drive ダウンロードリンクと配置先を導入手順に追記。 |
 | 2026-04-30 | README を概要・導入・ローカル実行・評価・提出手順中心に整理し、詳細な tool/module 説明を docs 参照へ移動。 |
 | 2026-04-30 | Docker build、ローカル疑似評価、ローカル採点、archive 作成、Google Drive 提出までの手順を追加。 |
 | 2026-04-30 | Dockerfile をマルチステージ化し、runtime image から `uv` と build 用ファイルを除外。 |
 | 2026-04-30 | Docker 提出 image の entrypoint を `.venv/bin/dabench` 直接実行に変更し、起動時の `uv run` 再同期を回避。 |
 | 2026-04-30 | `submit-run` 後の評価手順を project-local skill `.codex/skills/dabench-evaluate-run` として追加。 |
+| 2026-05-01 | `submit-run` 後の trace・runtime log・prediction を統合分析する project-local skill `.codex/skills/dabench-analyze-run` を追加。 |
+| 2026-05-01 | `execute_data_query` と `validate_answer` を追加し、answer 形状・tie・集計の検証方針とモデル API timeout/retry 設定を追加。 |
+| 2026-05-01 | task 難易度と context 構成に応じた agent strategy を追加し、`execute_data_query` の CSV 型推論・SQLite alias・修復可能エラー応答を改善。 |
 | 2026-04-30 | 公開デモの `gold.csv` に対する `evaluate-run` コマンドを追加。 |
 | 2026-04-30 | `AGENTS.md` にプロンプト文言は英語、人間向け解説は日本語とする言語方針を追記。 |
 | 2026-04-30 | モデル向けツール説明文を system prompt と揃えて英語化。 |

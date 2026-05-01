@@ -6,7 +6,7 @@
 
 1. `runner.py` が `OpenAIModelAdapter`、`ToolRegistry`、`ReActAgent` を組み立てる。
 2. `ReActAgent.run()` がタスクごとに実行状態を初期化する。
-3. `_build_messages()` が system prompt、task prompt、過去ステップの observation を会話履歴に変換する。
+3. `_build_messages()` が system prompt、難易度別 strategy を含む task prompt、過去ステップの observation を会話履歴に変換する。
 4. `ModelAdapter.complete()` でモデルから次の行動を受け取る。
 5. `parse_model_step()` がモデル応答から `thought`, `action`, `action_input` を取り出す。
 6. `ToolRegistry.execute()` が指定ツールを実行し、結果を observation として保存する。
@@ -114,7 +114,7 @@ flowchart TD
 - `OpenAIModelAdapter`: OpenAI 互換 Chat Completions API を呼び出す実装。
 - `ScriptedModelAdapter`: 固定レスポンスを順に返すテスト・検証用アダプタ。
 
-`OpenAIModelAdapter` は `config.agent` の `model`, `api_base`, `api_key`, `temperature` を使います。API キーが空の場合やレスポンス本文が無い場合は `RuntimeError` を送出します。
+`OpenAIModelAdapter` は `config.agent` の `model`, `api_base`, `api_key`, `temperature`, `request_timeout_seconds`, `max_retries` を使います。API キーが空の場合やレスポンス本文が無い場合は `RuntimeError` を送出します。
 
 ### `prompt.py`
 
@@ -123,7 +123,7 @@ flowchart TD
 - `REACT_SYSTEM_PROMPT`: ReAct エージェントの基本ルール。
 - `RESPONSE_EXAMPLES`: JSON fenced block の応答例。
 - `build_system_prompt()`: 基本ルール、ツール説明、応答例を結合する。
-- `build_task_prompt()`: タスクの質問文とパス指定ルールを作る。
+- `build_task_prompt()`: タスクの質問文、context 構成、難易度別 strategy、パス指定ルールを作る。
 - `build_observation_prompt()`: ツール実行結果を JSON 形式の observation として渡す。
 
 モデル応答は、単一の JSON オブジェクトを ```json fenced block に入れる前提です。
@@ -151,6 +151,18 @@ ReAct の実行ループを担当する中心モジュールです。
 ### `__init__.py`
 
 `agents` パッケージ外から使う主要クラス・関数を再エクスポートします。
+
+## 標準ツール
+
+`tools/registry.py` でモデルに公開する tool を登録します。
+
+- `list_context`: `context/` 配下のファイル一覧を取得する。
+- `read_csv`, `read_json`, `read_doc`: CSV/JSON/テキストのプレビューを取得する。
+- `inspect_sqlite_schema`, `execute_context_sql`: SQLite schema 確認と読み取り SQL 実行を行う。
+- `execute_data_query`: CSV/TSV/JSON/SQLite を DuckDB 上に登録し、横断 SQL で join・集計・ranking を行う。CSV は型推論し、単一 table の SQLite は元 table 名に加えて source alias でも参照できる。
+- `execute_python`: `context/` 配下を working directory として Python を実行する。
+- `validate_answer`: 最終回答前に余分列、結合済み名前、tie、集計式のリスクを確認する。
+- `answer`: 最終回答 table を提出して task を終了する。
 
 ## 主要な入出力
 

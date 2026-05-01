@@ -35,7 +35,7 @@ uv run dabench run-benchmark --config configs/react_baseline.example.yaml
 - `skills/dabench-evaluate-run/SKILL.md`: `submit-run` や `run-benchmark` 後の `prediction.csv` を公開 `gold.csv` と照合し、ローカル評価スコアを出す手順。
 
 提出・評価環境に関わる作業では、先に `docs/submission.md` を確認してください。
-提出用 team_id は `SumRTA` です。Docker image は `SumRTA:v<N>`、archive は `SumRTA_v<N>.tar.gz` の形式にしてください。
+提出用 team_id は `1560` です。Docker image は `1560:v<N>`、archive は `1560_v<N>.tar.gz` の形式にしてください。
 
 ## データと出力
 

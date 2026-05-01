@@ -1,0 +1,4 @@
+interface:
+  display_name: "DABench Run Analyzer"
+  short_description: "Analyze DABench run traces and outputs to propose improvements."
+  default_prompt: "Analyze a DABench submit-run or benchmark output and recommend concrete improvements."

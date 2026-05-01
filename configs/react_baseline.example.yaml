@@ -7,6 +7,8 @@ agent:
   api_key: YOUR_API_KEY
   max_steps: 16
   temperature: 0.0
+  request_timeout_seconds: 120
+  max_retries: 2
 
 run:
   output_dir: artifacts/runs

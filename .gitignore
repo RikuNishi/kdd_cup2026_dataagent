@@ -37,3 +37,7 @@ configs/*
 .ipynb_checkpoints/
 
 *.tar.gz
+
+
+# baselineの結果
+baseline_results/*
