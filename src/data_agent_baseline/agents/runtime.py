@@ -23,6 +23,9 @@ class StepRecord:
 @dataclass(slots=True)
 class AgentRuntimeState:
     steps: list[StepRecord] = field(default_factory=list)
+    task_memory: dict[str, Any] | None = None
+    last_validation_ready: bool | None = None
+    last_validation_warnings: list[str] = field(default_factory=list)
     answer: AnswerTable | None = None
     failure_reason: str | None = None
 
@@ -33,6 +36,7 @@ class AgentRunResult:
     answer: AnswerTable | None
     steps: list[StepRecord]
     failure_reason: str | None
+    task_memory: dict[str, Any] | None = None
 
     @property
     def succeeded(self) -> bool:
@@ -43,6 +47,7 @@ class AgentRunResult:
             "task_id": self.task_id,
             "answer": self.answer.to_dict() if self.answer is not None else None,
             "steps": [step.to_dict() for step in self.steps],
+            "task_memory": self.task_memory,
             "failure_reason": self.failure_reason,
             "succeeded": self.succeeded,
         }

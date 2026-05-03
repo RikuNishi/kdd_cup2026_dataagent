@@ -11,6 +11,7 @@
 - モデルに渡す system prompt、task prompt、tool description、修復指示などのプロンプト文言は英語で書く。
 - docstring、コメント、README、docs、memo など人間向けの解説は原則として日本語で書く。
 - ファイルパスは原則としてプロジェクトルートからの相対パスで扱う。
+- agent 構成、実行フロー、tool 仕様、設定、提出方式などを変更した場合は、必ず `docs/` 配下の該当する Markdown も同時に更新する。
 - 仕様や運用に関わる変更をした場合は、`README.md` の改訂記録も更新する。
 
 ## 主要コマンド

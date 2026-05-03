@@ -12,21 +12,22 @@
 
 > KDD Cup 2026 DataAgent-Bench チャレンジ向けのスターターキットです。公開デモデータセットを読み込み、各タスクの `prediction.csv` と実行ログを生成します。
 
-## v2 改善結果メモ
+## v2/v3 改善結果メモ
 
-`baseline_results/dabench-output` と v2 実行結果 `dabench-output` を、公開デモの `data/public/output` に対してローカル近似評価した比較です。hidden test の公式スコアそのものではありません。
+`baseline_results/dabench-output`、v2 実行結果、今回の変更を v3 として扱った実行結果を、公開デモの `data/public/output` に対してローカル近似評価した比較です。hidden test の公式スコアそのものではありません。
 
-| run | scored | missing | average_score | average_recall |
-| --- | ---: | ---: | ---: | ---: |
-| baseline_results | 42/50 | 8 | 0.527500 | 0.533333 |
-| v2 `dabench-output` | 43/50 | 7 | 0.610000 | 0.613333 |
-| 差分 | +1 | -1 | +0.082500 | +0.080000 |
+| run | scored | missing | average_score | メモ |
+| --- | ---: | ---: | ---: | --- |
+| baseline_results | 42/50 | 8 | 0.527500 | 初期 baseline |
+| v2 `dabench-output` | 43/50 | 7 | 0.610000 | `profile_context`、retrieval、DuckDB、answer validation を追加 |
+| v3 現行変更 | 42/50 | 8 | 0.684333 | validation gate を soft gate 化し、候補比較を task memory に注入 |
+| v2 から v3 | -1 | +1 | +0.074333 | 未提出は増えたが、提出できたタスクの精度が改善 |
 
-主な改善は、`task_19`, `task_22`, `task_38`, `task_243`, `task_350`, `task_408` が 0 点から 1.0 へ改善したことです。一方で `task_11`, `task_86` は 1.0 から 0 点へ悪化しており、次の優先確認対象です。
+v2 から v3 では、`task_11`, `task_27`, `task_86`, `task_196`, `task_259`, `task_330` が改善しました。一方で `task_38`, `task_349` は悪化しており、validation を強めすぎずに候補比較を促す現在の方向性は有効だが、タスク別の過剰補正はまだ残っています。
 
 ## 概要
 
-このリポジトリは、DataAgent-Bench のタスクを ReAct 型 agent で解くためのベースラインです。v2 では ReAct ループに加えて、context profile、文書 retrieval、DuckDB 横断クエリ、answer 検査を標準ツール化しています。agent は各 `task_<id>/task.json` の質問を読み、同じタスクの `context/` 配下にある CSV、JSON、SQLite、Markdown 等をツール経由で確認し、最終回答を `prediction.csv` として出力します。
+このリポジトリは、DataAgent-Bench のタスクを ReAct 型 agent で解くためのベースラインです。現行構成では ReAct ループの前に `profile_context` を必ず実行し、schema、`knowledge.md`、候補列、join 候補、曖昧性 checklist から task memory を作ります。その後、task memory を毎 step の prompt に注入しながら、文書 retrieval、DuckDB 横断クエリ、answer 検査を行い、最終回答を `prediction.csv` として出力します。
 
 | 項目 | 内容 |
 | --- | --- |
@@ -204,6 +205,11 @@ Sharing link: <Google Drive link>
 
 | 日付 | 内容 |
 | --- | --- |
+| 2026-05-03 | 現行の Phase 0 task memory、deterministic ambiguity checklist、soft validation gate を `docs/overview.md` と README 概要に反映。 |
+| 2026-05-03 | 今回の変更を v3 として扱い、公開 gold によるローカル近似評価で average score `0.684333` として README に記録。 |
+| 2026-05-03 | コンペ向けに `validate_answer` を soft gate 化し、曖昧語・tie・重複・source choice は warning に留め、`answer` 抑止は未検証または shape error に限定。 |
+| 2026-05-02 | `profile_context` に deterministic ambiguity checklist を追加し、候補比較を task memory に永続注入。曖昧語の `validate_answer` は選択候補と棄却候補の比較根拠を要求するよう更新し、既定 `max_steps` を 18 に変更。 |
+| 2026-05-02 | `profile_context` 由来の LLM task memory を ReAct prompt に永続注入し、`validate_answer` の blocking warning 後に `answer` を抑止する validation gate を追加。 |
 | 2026-05-01 | v2 実行結果を `baseline_results` と公開 gold で比較し、平均 score が `0.527500` から `0.610000` へ改善したことを記録。 |
 | 2026-05-01 | v2 構造刷新として `profile_context`、`retrieve_context`、`execute_data_query`、`validate_answer` を実装し、難易度別 prompt、config の timeout/retry、既定 `max_workers=4` を整備。 |
 | 2026-05-01 | 提出用 Team ID を `1560` に更新し、Docker image tag、archive 名、メール提出例を `1560` 形式へ変更。 |

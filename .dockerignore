@@ -10,6 +10,8 @@ artifacts/
 data/
 public/
 evaluation/
+baseline_results/
+v*_results/
 
 configs/*.local.yaml
 configs/*.local.yml

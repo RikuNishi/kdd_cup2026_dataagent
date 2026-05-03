@@ -330,7 +330,8 @@ def create_default_tool_registry() -> ToolRegistry:
             description=(
                 "Validate the candidate final answer table before calling answer. It checks "
                 "shape errors and warns about empty answers, likely extra columns, possible "
-                "tie/multiple-row omissions, and numeric formatting risks."
+                "tie/multiple-row omissions, ambiguous candidates, and numeric formatting risks. "
+                "Warnings are non-blocking when ready_for_answer is true."
             ),
             input_schema={
                 "columns": ["column_name"],

@@ -1,17 +1,20 @@
 # agents コード概要
 
-`src/data_agent_baseline/agents/` は、ReAct 形式でモデルにツールを使わせ、最終回答を作るための実行基盤です。v2 では素の逐次 ReAct に加えて、`profile_context`、`retrieve_context`、`execute_data_query`、`validate_answer` を標準ツール化し、context scan、文書検索、横断クエリ、回答検査を明示的な手順として扱います。
+`src/data_agent_baseline/agents/` は、ReAct 形式でモデルにツールを使わせ、最終回答を作るための実行基盤です。現行構成では ReAct の前に `profile_context` を必ず実行し、その結果から task memory を作成します。ReAct 本体では task memory を毎 step の prompt に注入し、`retrieve_context`、`execute_data_query`、`validate_answer` を使って文書検索、横断クエリ、回答検査を明示的な手順として扱います。
 
 ## 全体フロー
 
 1. `runner.py` が `OpenAIModelAdapter`、`ToolRegistry`、`ReActAgent` を組み立てる。
 2. `ReActAgent.run()` がタスクごとに実行状態を初期化する。
-3. `_build_messages()` が system prompt、難易度別 strategy、v2 tool workflow を含む task prompt、過去ステップの observation を会話履歴に変換する。
-4. `ModelAdapter.complete()` でモデルから次の行動を受け取る。
-5. `parse_model_step()` がモデル応答から `thought`, `action`, `action_input` を取り出す。
-6. `ToolRegistry.execute()` が指定ツールを実行し、結果を observation として保存する。
-7. 通常は `profile_context -> retrieve/query -> validate_answer -> answer` の順に進む。
-8. `answer` ツールが呼ばれるか、`max_steps` に到達するまで繰り返す。
+3. Phase 0 として `profile_context` を実行し、trace の step 1 に保存する。
+4. `profile_context` の `knowledge`、schema、候補列、join 候補、曖昧性 checklist から task memory を生成する。
+5. Phase 1 の ReAct では、`_build_messages()` が system prompt、task prompt、task memory、過去ステップの observation を会話履歴に変換する。
+6. `ModelAdapter.complete()` でモデルから次の行動を受け取る。
+7. `parse_model_step()` がモデル応答から `thought`, `action`, `action_input` を取り出す。
+8. `answer` が未検証または shape error が残る状態で呼ばれた場合は、tool 実行前に `answer_guard` observation として抑止する。
+9. それ以外は `ToolRegistry.execute()` が指定ツールを実行し、結果を observation として保存する。
+10. 通常は `retrieve/query -> validate_answer -> answer` の順に進む。
+11. `answer` ツールが通るか、`max_steps` に到達するまで繰り返す。
 
 ## 現在の処理フロー
 
@@ -36,10 +39,15 @@ flowchart TD
     L --> M[OpenAIModelAdapter と ToolRegistry を作成]
     M --> N[ReActAgent.run]
 
-    N --> O[プロンプトと履歴を作成]
+    N --> N1[Phase 0: profile_context を実行]
+    N1 --> N2[task memory を生成]
+    N2 --> O[プロンプト、task memory、履歴を作成]
     O --> P[モデルへ問い合わせ]
     P --> Q[JSON 応答を parse_model_step で解析]
-    Q --> R[ToolRegistry.execute でツール実行]
+    Q --> AG{未検証または shape error 後の answer?}
+    AG -->|はい| AGuard[answer_guard observation を追加]
+    AGuard --> U{max_steps 到達?}
+    AG -->|いいえ| R[ToolRegistry.execute でツール実行]
     R --> S[observation を StepRecord に保存]
     S --> T{answer?}
     T -->|いいえ| U{max_steps 到達?}
@@ -93,23 +101,29 @@ flowchart TD
 
 1. `build_system_prompt()` で基本ルール、ツール説明、応答例をまとめる。
 2. `build_task_prompt()` で質問文を user message にする。
-3. 過去ステップがあれば、モデルの生応答と observation を履歴に追加する。
-4. `model.complete()` で次のモデル応答を取得する。
-5. `parse_model_step()` で JSON fenced block を読み取り、`action` と `action_input` を得る。
-6. `tools.execute()` で該当ツールを実行する。
-7. ツール結果を observation として `StepRecord` に保存する。
-8. `answer` ツールなら `state.answer` をセットして終了する。
-9. 例外が出た場合は `__error__` ステップとして記録し、次のステップに進む。
+3. Phase 0 で作成した task memory を user message として追加する。
+4. 過去ステップがあれば、モデルの生応答と observation を履歴に追加する。
+5. `model.complete()` で次のモデル応答を取得する。
+6. `parse_model_step()` で JSON fenced block を読み取り、`action` と `action_input` を得る。
+7. 直近の `validate_answer` が未実行、または `ready_for_answer=false` の状態で `answer` が呼ばれた場合は、`answer` を実行せず `answer_guard` observation を保存する。
+8. それ以外は `tools.execute()` で該当ツールを実行する。
+9. ツール結果を observation として `StepRecord` に保存する。
+10. `validate_answer` 実行時は `ready_for_answer` と warning を runtime state に保存する。
+11. `answer` ツールが通れば `state.answer` をセットして終了する。
+12. 例外が出た場合は `__error__` ステップとして記録し、次のステップに進む。
 
 `max_steps` 以内に `answer` が呼ばれなかった場合は、`failure_reason` に `"Agent did not submit an answer within max_steps."` が入ります。
 
-### v2 の solver 方針
+### 現行の solver 方針
 
-v2 は agent loop 自体を大きく分岐させず、モデルに公開するツールと prompt で solver 方針を固定します。
+現行構成は、最初だけ workflow として `profile_context` と task memory 生成を固定し、その後は ReAct で必要な tool を選ばせます。
 
-- Easy: `profile_context` の後、CSV/JSON を `execute_python` または `execute_data_query` で処理する。
+- Phase 0: `profile_context` で `knowledge.md` 全文、schema、候補列、join 候補、cardinality hints、曖昧性 checklist を取得する。
+- Task memory: LLM が `profile_context` を短く要約し、`facts`、`candidate_columns`、`relationships`、`risks`、`validation_checks` を作る。LLM の要約に加えて、機械的な `deterministic_ambiguity_checklist` は必ず残す。
+- Easy: Phase 0 の後、CSV/JSON を `execute_python` または `execute_data_query` で処理する。
 - Medium: SQLite schema と CSV/JSON schema を先に見て、DB 単体は `execute_context_sql`、横断 join は `execute_data_query` を使う。
 - Hard/Extreme: `retrieve_context` で `knowledge.md` と `doc/*.md` から関連 chunk を集めてから、構造データの query と計算に進む。
+- Validation: `validate_answer` は shape error を hard risk として扱い、曖昧語・tie・重複・source choice は warning として返す。`ready_for_answer=true` なら warning は提出を止めない。
 
 `knowledge.md` は `context/knowledge.md` 直下を標準として扱います。存在しない `doc/knowledge.md` などのパスを決め打ちしないよう、system prompt と `profile_context` の `path_rules` で明示しています。
 
@@ -135,6 +149,8 @@ v2 は agent loop 自体を大きく分岐させず、モデルに公開する�
 - `RESPONSE_EXAMPLES`: JSON fenced block の応答例。
 - `build_system_prompt()`: 基本ルール、ツール説明、応答例を結合する。
 - `build_task_prompt()`: タスクの質問文、context 構成、難易度別 strategy、パス指定ルールを作る。
+- `build_task_memory_prompt()`: Phase 0 の `profile_context` から task memory JSON を作るための prompt を返す。
+- `build_task_memory_message()`: ReAct の各 model call に注入する task memory message を返す。
 - `build_observation_prompt()`: ツール実行結果を JSON 形式の observation として渡す。
 
 モデル応答は、単一の JSON オブジェクトを ```json fenced block に入れる前提です。
@@ -147,7 +163,7 @@ ReAct の実行ループを担当する中心モジュールです。
 - `_strip_json_fence()`: fenced block から JSON 本体を取り出す。
 - `_load_single_json_object()`: 応答が単一 JSON オブジェクトだけであることを確認する。
 - `parse_model_step()`: モデル応答を `ModelStep` に変換する。
-- `ReActAgent`: モデル呼び出し、ツール実行、履歴更新、終了判定を行う。
+- `ReActAgent`: Phase 0 の profile 実行、task memory 生成、モデル呼び出し、ツール実行、answer guard、履歴更新、終了判定を行う。
 
 ツール実行やパースで例外が起きた場合も、ステップは `__error__` として記録されます。その後も `max_steps` までは継続します。
 
@@ -156,7 +172,7 @@ ReAct の実行ループを担当する中心モジュールです。
 実行中および実行後の状態を表すデータクラスを定義します。
 
 - `StepRecord`: 1 ステップ分の thought、action、入力、モデル生応答、observation、成否。
-- `AgentRuntimeState`: 実行中のステップ履歴、回答、失敗理由。
+- `AgentRuntimeState`: 実行中のステップ履歴、回答、失敗理由、task memory、直近 validation 状態。
 - `AgentRunResult`: 実行結果。`succeeded` で成功判定し、`to_dict()` で trace 用の辞書に変換する。
 
 ### `__init__.py`
@@ -168,13 +184,13 @@ ReAct の実行ループを担当する中心モジュールです。
 `tools/registry.py` でモデルに公開する tool を登録します。
 
 - `list_context`: `context/` 配下のファイル一覧を取得する。
-- `profile_context`: task の難易度、質問、存在ファイル、modality、CSV header/row count、JSON shape、SQLite schema、文書見出し、`knowledge.md` 位置をまとめて返す。
+- `profile_context`: task の難易度、質問、存在ファイル、modality、CSV header/row count、JSON shape、SQLite schema、文書見出し、`knowledge.md` 全文、候補列、join 候補、cardinality hints、曖昧性 checklist をまとめて返す。
 - `retrieve_context`: `knowledge.md` と `doc/*.md` から、質問・キーワードに関連する chunk を返す。
 - `read_csv`, `read_json`, `read_doc`: CSV/JSON/テキストのプレビューを取得する。
 - `inspect_sqlite_schema`, `execute_context_sql`: SQLite schema 確認と読み取り SQL 実行を行う。
 - `execute_data_query`: CSV/JSON/SQLite を DuckDB 上に登録し、横断 SQL で join・集計・ranking を行う。JSON は `records` wrapper を table 化し、単一 table の SQLite は table 名で参照できる view も作る。
 - `execute_python`: `context/` 配下を working directory として Python を実行する。
-- `validate_answer`: 最終回答前に shape error、空回答、余分列、tie、複数行取りこぼし、数値表記のリスクを確認する。
+- `validate_answer`: 最終回答前に shape error、空回答、余分列、tie、複数行取りこぼし、曖昧語、source choice、数値表記のリスクを確認する。shape error がなければ `ready_for_answer=true` とし、warning は原則として提出を止めない。
 - `answer`: 最終回答 table を提出して task を終了する。
 
 ## 主要な入出力

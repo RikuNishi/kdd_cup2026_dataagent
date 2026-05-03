@@ -5,7 +5,7 @@ agent:
   model: YOUR_MODEL_NAME
   api_base: YOUR_API_BASE_URL
   api_key: YOUR_API_KEY
-  max_steps: 16
+  max_steps: 18
   temperature: 0.0
   request_timeout_seconds: 120
   max_retries: 2

@@ -27,7 +27,7 @@ class AgentConfig:
     model: str = "gpt-4.1-mini"
     api_base: str = "https://api.openai.com/v1"
     api_key: str = ""
-    max_steps: int = 16
+    max_steps: int = 18
     temperature: float = 0.0
     request_timeout_seconds: float = 120.0
     max_retries: int = 2

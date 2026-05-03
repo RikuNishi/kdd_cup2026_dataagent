@@ -54,7 +54,37 @@ def _answer_response(value: str) -> str:
     )
 
 
-def _config(input_dir: Path, *, max_steps: int = 1) -> AppConfig:
+def _validate_response(value: str) -> str:
+    return json.dumps(
+        {
+            "thought": "validate answer",
+            "action": "validate_answer",
+            "action_input": {
+                "columns": ["result"],
+                "rows": [[value]],
+                "notes": "No ambiguity; computed directly.",
+            },
+        }
+    )
+
+
+def _invalid_response() -> str:
+    return '{"thought":"bad","action":"answer","action_input":"not-object"}'
+
+
+def _memory_response() -> str:
+    return json.dumps(
+        {
+            "facts": ["Use the task data."],
+            "candidate_columns": [],
+            "relationships": [],
+            "risks": [],
+            "validation_checks": [],
+        }
+    )
+
+
+def _config(input_dir: Path, *, max_steps: int = 2) -> AppConfig:
     return AppConfig(
         dataset=DatasetConfig(root_path=input_dir),
         agent=AgentConfig(
@@ -89,7 +119,7 @@ def test_submit_run_writes_prediction_to_output_and_trace_to_logs(tmp_path: Path
     output_dir = tmp_path / "output"
     logs_dir = tmp_path / "logs"
     original_task_json = _write_task(input_dir, "task_1")
-    model = SequentialModelAdapter([_answer_response("ok")])
+    model = SequentialModelAdapter([_memory_response(), _validate_response("ok"), _answer_response("ok")])
 
     artifacts = run_submit_benchmark(
         config=_config(input_dir),
@@ -116,7 +146,11 @@ def test_submit_run_continues_after_task_failure(tmp_path: Path) -> None:
     _write_task(input_dir, "task_2")
     model = SequentialModelAdapter(
         [
-            '{"thought":"bad","action":"answer","action_input":"not-object"}',
+            _memory_response(),
+            _invalid_response(),
+            _invalid_response(),
+            _memory_response(),
+            _validate_response("second-ok"),
             _answer_response("second-ok"),
         ]
     )
