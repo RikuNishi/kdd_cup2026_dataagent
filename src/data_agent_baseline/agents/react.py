@@ -25,6 +25,7 @@ INVALID_RESPONSE_ASSISTANT_MESSAGE = (
     "The previous response was invalid and could not be executed. "
     "Follow the observation repair instructions exactly."
 )
+MAX_HISTORY_STEPS_IN_CONTEXT = 8
 
 
 def _strip_json_fence(raw_response: str) -> str:
@@ -99,6 +100,17 @@ def _build_error_observation(exc: Exception, raw_response: str) -> dict[str, obj
     }
 
 
+def _build_step_summary(step: StepRecord) -> str:
+    if step.action == "__error__":
+        return (
+            f"- step {step.step_index}: invalid model response, "
+            f"error={step.observation.get('error_type', 'unknown')}"
+        )
+    tool_name = str(step.observation.get("tool", step.action))
+    ok_flag = "ok" if step.ok else "fail"
+    return f"- step {step.step_index}: action={step.action}, tool={tool_name}, status={ok_flag}"
+
+
 class ReActAgent:
     def __init__(
         self,
@@ -120,7 +132,15 @@ class ReActAgent:
         )
         messages = [ModelMessage(role="system", content=system_content)]
         messages.append(ModelMessage(role="user", content=build_task_prompt(task)))
-        for step in state.steps:
+        prior_steps = state.steps[:-MAX_HISTORY_STEPS_IN_CONTEXT]
+        if prior_steps:
+            summary_lines = [
+                "Earlier steps summary. Reuse these facts instead of repeating the same tool calls unless needed:",
+                *[_build_step_summary(step) for step in prior_steps],
+            ]
+            messages.append(ModelMessage(role="user", content="\n".join(summary_lines)))
+
+        for step in state.steps[-MAX_HISTORY_STEPS_IN_CONTEXT:]:
             assistant_content = (
                 INVALID_RESPONSE_ASSISTANT_MESSAGE
                 if step.action == "__error__"

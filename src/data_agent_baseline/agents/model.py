@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import time
 from typing import Any, Protocol
 
-from openai import APIError, BadRequestError, OpenAI
+from openai import APIConnectionError, APIError, APITimeoutError, BadRequestError, OpenAI, RateLimitError
 
 
 @dataclass(frozen=True, slots=True)
@@ -25,6 +26,10 @@ class ModelAdapter(Protocol):
         raise NotImplementedError
 
 
+class EmptyModelResponseError(RuntimeError):
+    """モデル API が choices や message content のない応答を返した場合の retry 用例外。"""
+
+
 class OpenAIModelAdapter:
     def __init__(
         self,
@@ -33,6 +38,7 @@ class OpenAIModelAdapter:
         api_base: str,
         api_key: str,
         temperature: float,
+        max_output_tokens: int = 2048,
         request_timeout_seconds: float = 120.0,
         max_retries: int = 2,
     ) -> None:
@@ -40,8 +46,23 @@ class OpenAIModelAdapter:
         self.api_base = api_base.rstrip("/")
         self.api_key = api_key
         self.temperature = temperature
+        self.max_output_tokens = max_output_tokens
         self.request_timeout_seconds = request_timeout_seconds
         self.max_retries = max_retries
+
+    def _create_completion(
+        self,
+        client: OpenAI,
+        request_payload: dict[str, Any],
+    ) -> Any:
+        try:
+            return client.chat.completions.create(**request_payload)
+        except BadRequestError as exc:
+            if "response_format" not in str(exc):
+                raise
+            fallback_payload = dict(request_payload)
+            fallback_payload.pop("response_format", None)
+            return client.chat.completions.create(**fallback_payload)
 
     def complete(self, messages: list[ModelMessage]) -> str:
         if not self.api_key:
@@ -51,33 +72,44 @@ class OpenAIModelAdapter:
             api_key=self.api_key,
             base_url=self.api_base,
             timeout=self.request_timeout_seconds,
-            max_retries=self.max_retries,
+            max_retries=0,
         )
 
-        try:
-            request_payload = {
-                "model": self.model,
-                "messages": [
-                    {"role": message.role, "content": message.content} for message in messages
-                ],
-                "temperature": self.temperature,
-                "response_format": {"type": "json_object"},
-            }
-            response = client.chat.completions.create(**request_payload)
-        except BadRequestError as exc:
-            if "response_format" not in str(exc):
-                raise RuntimeError(f"Model request failed: {exc}") from exc
-            request_payload.pop("response_format", None)
-            response = client.chat.completions.create(**request_payload)
-        except APIError as exc:
-            raise RuntimeError(f"Model request failed: {exc}") from exc
+        request_payload = {
+            "model": self.model,
+            "messages": [
+                {"role": message.role, "content": message.content} for message in messages
+            ],
+            "temperature": self.temperature,
+            "max_tokens": self.max_output_tokens,
+            "response_format": {"type": "json_object"},
+        }
 
-        choices = response.choices or []
-        if not choices:
-            raise RuntimeError("Model response missing choices.")
-        content = choices[0].message.content
-        if not isinstance(content, str):
-            raise RuntimeError("Model response missing text content.")
+        last_error: APIError | None = None
+        for attempt_index in range(self.max_retries + 1):
+            try:
+                response = self._create_completion(client, request_payload)
+                choices = response.choices or []
+                if not choices:
+                    raise EmptyModelResponseError("Model response missing choices.")
+                content = choices[0].message.content
+                if not isinstance(content, str) or not content.strip():
+                    raise EmptyModelResponseError("Model response missing text content.")
+                break
+            except (RateLimitError, APITimeoutError, APIConnectionError) as exc:
+                last_error = exc
+                if attempt_index >= self.max_retries:
+                    raise RuntimeError(f"Model request failed: {exc}") from exc
+                time.sleep(min(2.0**attempt_index, 30.0))
+            except EmptyModelResponseError as exc:
+                if attempt_index >= self.max_retries:
+                    raise RuntimeError(str(exc)) from exc
+                time.sleep(min(2.0**attempt_index, 30.0))
+            except APIError as exc:
+                raise RuntimeError(f"Model request failed: {exc}") from exc
+        else:
+            raise RuntimeError(f"Model request failed: {last_error}")
+
         return content
 
 

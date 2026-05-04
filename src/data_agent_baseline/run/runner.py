@@ -67,6 +67,7 @@ def build_model_adapter(config: AppConfig):
         api_base=config.agent.api_base,
         api_key=config.agent.api_key,
         temperature=config.agent.temperature,
+        max_output_tokens=config.agent.max_output_tokens,
         request_timeout_seconds=config.agent.request_timeout_seconds,
         max_retries=config.agent.max_retries,
     )
