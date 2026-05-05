@@ -100,8 +100,39 @@ def _build_error_observation(exc: Exception, raw_response: str) -> dict[str, obj
     }
 
 
+def _build_tool_error_observation(model_step: ModelStep, exc: Exception) -> dict[str, object]:
+    return {
+        "ok": False,
+        "tool": model_step.action,
+        "failed_action": model_step.action,
+        "failed_action_input": model_step.action_input,
+        "error": str(exc),
+        "error_type": type(exc).__name__,
+        "repair_instruction": (
+            "The tool call failed. Do not repeat the same tool call with the same input. "
+            "Fix the path/schema/query using profile_context, list_context, read_csv, read_json, "
+            "or inspect_sqlite_schema, or switch to execute_python/retrieve_context when that is simpler. "
+            "If a SQL query keeps failing, first run a smaller query that inspects columns or distinct values."
+        ),
+        "fallback_examples": [
+            {"action": "list_context", "action_input": {"max_depth": 4}},
+            {"action": "read_csv", "action_input": {"path": "csv/example.csv", "max_rows": 10}},
+            {
+                "action": "execute_python",
+                "action_input": {"code": "import os\nprint(sorted(os.listdir('.')))"},
+            },
+        ],
+    }
+
+
 def _build_step_summary(step: StepRecord) -> str:
     if step.action == "__error__":
+        failed_action = step.observation.get("failed_action")
+        if failed_action:
+            return (
+                f"- step {step.step_index}: tool error, action={failed_action}, "
+                f"error={step.observation.get('error_type', 'unknown')}"
+            )
         return (
             f"- step {step.step_index}: invalid model response, "
             f"error={step.observation.get('error_type', 'unknown')}"
@@ -158,6 +189,22 @@ class ReActAgent:
             raw_response = self.model.complete(self._build_messages(task, state))
             try:
                 model_step = parse_model_step(raw_response)
+            except Exception as exc:
+                observation = _build_error_observation(exc, raw_response)
+                state.steps.append(
+                    StepRecord(
+                        step_index=step_index,
+                        thought="",
+                        action="__error__",
+                        action_input={},
+                        raw_response=raw_response,
+                        observation=observation,
+                        ok=False,
+                    )
+                )
+                continue
+
+            try:
                 tool_result = self.tools.execute(task, model_step.action, model_step.action_input)
                 observation = {
                     "ok": tool_result.ok,
@@ -178,13 +225,13 @@ class ReActAgent:
                     state.answer = tool_result.answer
                     break
             except Exception as exc:
-                observation = _build_error_observation(exc, raw_response)
+                observation = _build_tool_error_observation(model_step, exc)
                 state.steps.append(
                     StepRecord(
                         step_index=step_index,
-                        thought="",
+                        thought=model_step.thought,
                         action="__error__",
-                        action_input={},
+                        action_input=model_step.action_input,
                         raw_response=raw_response,
                         observation=observation,
                         ok=False,

@@ -34,10 +34,13 @@ Never guess or invent values — always read them from files with tools.
 ## Fixed workflow (follow this order every task)
 
 Step 1. Call `profile_context` first. Read the returned file list and strategy.
-Step 2. Look at the files. Read schemas or previews for the files you need.
-Step 3. Compute the answer using SQL or Python. Never do math in your head.
-Step 4. Call `validate_answer` with your candidate table.
-Step 5. Call `answer` to submit the final table.
+Step 2. Call `plan_knowledge` to read the full knowledge.md content with the question and profiled data sources.
+Step 3. Understand the question: identify the requested output columns, filters, grouping, aggregation, ranking/tie rules, and units.
+Step 4. Inspect the exact source data you need. Preview CSV/JSON rows and inspect database tables with sample rows before writing the final query.
+Step 5. Compute the answer from source data using SQL or Python. Never answer from profile_context, plan_knowledge, previews, or observations alone.
+Step 6. If the result is empty or zero, verify source formatting, spelling, case, whitespace, nulls, date formats, and code/value mappings before accepting it.
+Step 7. Call `validate_answer` with your candidate table.
+Step 8. Call `answer` to submit the final table.
 
 ---
 
@@ -45,20 +48,26 @@ Step 5. Call `answer` to submit the final table.
 
 ### Exploring files
 - Call `profile_context` first every task. It returns all available file paths and a recommended strategy.
+- Call `plan_knowledge` immediately after `profile_context`. Read the full knowledge.md content and use it as planning context before deciding which data files or document chunks to query next.
 - Use `list_context` if you need to re-check the directory structure at any point.
 - Use `read_csv` to preview a CSV file's column names and sample rows before querying.
 - Use `read_json` to preview the structure and content of a JSON file before querying.
 - Use `read_doc` to read a document file directly when you need its full or partial text.
 
 ### Inspecting databases
-- Use `inspect_sqlite_schema` to check the table names and column definitions of a SQLite database before writing SQL.
+- Use `inspect_sqlite_schema` to check table names, column definitions, row counts, and sample preview rows of a SQLite database before writing SQL.
+- For every database table you plan to use, inspect actual values with `inspect_sqlite_schema` preview rows or a small `execute_context_sql` query such as `SELECT * FROM table LIMIT 5`.
 
 ### Querying data
 - Use `execute_context_sql` ONLY for .db / .sqlite / .sqlite3 files.
 - Use `execute_data_query` when you need to JOIN or compare CSV, JSON, and/or SQLite files together in one query.
 - Use `execute_python` for complex calculations that SQL cannot handle (e.g. weighted averages, string parsing, multi-step logic).
+- Before aggregation or joining, inspect the relevant source columns and actual key values. Build the query step by step: first confirm sample rows/keys, then filter, then join, then aggregate/rank.
+- If a query returns zero rows or all-zero values, do not accept it immediately. Check alternate spellings/case, whitespace, date formats, data types, nulls, and knowledge.md code definitions.
+- If a tool call fails or a query cannot be repaired quickly, switch tools or simplify the task: use read_csv/read_json/inspect_sqlite_schema for structure, execute_python for flexible parsing, or retrieve_context/read_doc for text.
 
 ### Searching documents
+- Use `plan_knowledge` to read all knowledge.md rules before your first data query.
 - Use `retrieve_context` to search knowledge.md for term definitions and rules.
 - Use `retrieve_context` to search doc/ files for actual data values needed to answer the question.
 
@@ -67,7 +76,7 @@ Step 5. Call `answer` to submit the final table.
 - Use `answer` to submit the final table. The task ends only when you call `answer`.
 
 ### Path rules
-- Only use file paths returned by `profile_context` or `list_context`. Do not invent paths.
+- Only use file paths returned by `profile_context` or `list_context`, except `plan_knowledge` and `retrieve_context` may inspect top-level `knowledge.md`. Do not invent paths.
 - `knowledge.md` is at the TOP of `context/`, not inside `doc/`.
 
 ---
@@ -76,13 +85,16 @@ Step 5. Call `answer` to submit the final table.
 
 - Include ALL rows that match the question (include ties).
 - Return only the columns needed to answer the question. Do not add extra ID or explanation columns.
+- Preserve source data fields as-is. Do NOT concatenate, split, normalize, or reformat columns such as first_name + last_name into a synthetic full name unless the question explicitly asks for a combined value and the data has no suitable original field.
 - Numbers: write as plain decimal (e.g. 63.5, not "63.5 points" or "~64").
 - Strings: copy exact values from the data. Do not change capitalization.
-- Dates: use YYYY-MM-DD format.
 - Null / missing: write as empty string "".
+- The final answer must be based on a computation/query over the source data. Do not answer only from profile_context, plan_knowledge, read previews, or prior observation summaries.
 - Always call `validate_answer` before `answer`.
 - The task ends only when you call `answer`.
 """.strip()
+# - Dates: use YYYY-MM-DD format.
+
 
 
 # ---------------------------------------------------------------------------
@@ -97,6 +109,11 @@ Profile the context first:
 {"thought": "I will profile the context to see what files are available.", "action": "profile_context", "action_input": {}}
 ```
 
+Read full knowledge.md definitions and rules:
+```json
+{"thought": "I will read the full knowledge rules that may affect the next query strategy.", "action": "plan_knowledge", "action_input": {}}
+```
+
 List the directory if you need to recheck available files:
 ```json
 {"thought": "I will list the context directory to confirm the file structure.", "action": "list_context", "action_input": {"max_depth": 3}}
@@ -105,6 +122,11 @@ List the directory if you need to recheck available files:
 Preview a CSV file's columns and sample rows:
 ```json
 {"thought": "I will preview the CSV to understand its columns before querying.", "action": "read_csv", "action_input": {"path": "csv/sales.csv", "max_rows": 10}}
+```
+
+Check key values before filtering:
+```json
+{"thought": "I will inspect distinct status values before applying the filter.", "action": "execute_data_query", "action_input": {"sources": ["csv/orders.csv"], "sql": "SELECT status, COUNT(*) AS n FROM orders GROUP BY status ORDER BY n DESC", "limit": 50}}
 ```
 
 Preview a JSON file's structure:
@@ -120,6 +142,11 @@ Read a document file directly:
 Check a SQLite database schema before querying:
 ```json
 {"thought": "I will inspect the database schema to understand the table structure.", "action": "inspect_sqlite_schema", "action_input": {"path": "db/hospital.db"}}
+```
+
+Preview SQLite table rows before filtering:
+```json
+{"thought": "I will preview actual patient rows before choosing filters.", "action": "execute_context_sql", "action_input": {"path": "db/hospital.db", "sql": "SELECT * FROM patients LIMIT 5", "limit": 5}}
 ```
 
 Query a SQLite database:
@@ -149,7 +176,7 @@ Search doc/ files for actual data values:
 
 Validate before submitting:
 ```json
-{"thought": "I will validate the candidate answer before submitting.", "action": "validate_answer", "action_input": {"columns": ["category", "total_revenue"], "rows": [["Electronics", "4200000.00"], ["Clothing", "1850000.00"]], "notes": "Summed from sales table grouped by category. No ties."}}
+{"thought": "I will validate the candidate answer before submitting.", "action": "validate_answer", "action_input": {"columns": ["category", "total_revenue"], "rows": [["Electronics", "4200000.00"], ["Clothing", "1850000.00"]], "notes": "Computed with execute_data_query from csv/sales.csv, grouped by category. Checked ties."}}
 ```
 
 Submit the final answer:
@@ -198,45 +225,56 @@ def build_task_prompt(task: PublicTask) -> str:
             "Available files: CSV and/or JSON only. There is no database or document file.\n"
             "Steps:\n"
             "1. Call profile_context to see the CSV/JSON file names and column names.\n"
-            "2. Preview the relevant file(s) with read_csv or read_json.\n"
-            "3. Compute the answer with execute_data_query or execute_python.\n"
-            "4. Do NOT call retrieve_context or inspect_sqlite_schema — there are no doc or db files."
+            "2. Call plan_knowledge to read knowledge.md and check whether it defines terms or rules that affect the question.\n"
+            "3. Identify requested output columns, filters, aggregation, ranking/ties, and units.\n"
+            "4. Preview the relevant file(s) with read_csv or read_json.\n"
+            "5. Confirm key values before filtering when names/codes/status/date formats are involved.\n"
+            "6. Compute the answer with execute_data_query or execute_python.\n"
+            "7. If the result is empty or zero, verify formatting and value variants before accepting it.\n"
+            "8. Do NOT call inspect_sqlite_schema — there are no db files."
         ),
         "medium": (
             "This is a MEDIUM task.\n"
             "Available files: SQLite database (always present), often with CSV and/or JSON.\n"
             "Steps:\n"
             "1. Call profile_context to get file names and schemas.\n"
-            "2. Call inspect_sqlite_schema to understand the database tables and columns.\n"
-            "3. Use execute_context_sql for queries within the database.\n"
-            "4. Use execute_data_query if you need to JOIN the database with CSV or JSON files.\n"
-            "5. Do NOT call retrieve_context unless profile_context shows a doc file."
+            "2. Call plan_knowledge to read knowledge.md and check whether it defines terms, thresholds, codes, or rules.\n"
+            "3. Identify requested output columns, filters, aggregation, ranking/ties, and units.\n"
+            "4. Call inspect_sqlite_schema to understand database tables, columns, row counts, and preview rows.\n"
+            "5. Check actual table rows, join keys, and distinct filter values before final filtering.\n"
+            "6. Use execute_context_sql for queries within the database.\n"
+            "7. Use execute_data_query if you need to JOIN the database with CSV or JSON files.\n"
+            "8. If the result is empty or zero, verify formatting and value variants before accepting it."
         ),
         "hard": (
             "This is a HARD task.\n"
             "Available files: doc/ documents are the main data source. Some tasks also have CSV or SQLite.\n"
             "Steps:\n"
             "1. Call profile_context first.\n"
-            "2. Call retrieve_context to search doc/ files for data values needed to answer the question.\n"
-            "   Also search knowledge.md for any term definitions or rules the question depends on.\n"
-            "   Use specific keywords from the question as the query.\n"
-            "3. If structured files (csv/ or db/) are also present, query them for additional data.\n"
-            "4. Combine the retrieved document data and structured query results to build the answer table."
+            "2. Call plan_knowledge to read full knowledge.md definitions and rules before choosing the next query.\n"
+            "3. Identify requested output columns, filters, aggregation, ranking/ties, and units.\n"
+            "4. Call retrieve_context to search doc/ files for data values needed to answer the question.\n"
+            "   If plan_knowledge identifies a relevant rule, use that rule in your query plan.\n"
+            "5. If structured files (csv/ or db/) are also present, query them for additional data.\n"
+            "6. Combine the retrieved document data and structured query results to build the answer table.\n"
+            "7. If the result is empty or zero, verify formatting and value variants before accepting it."
         ),
         "extreme": (
             "This is an EXTREME task.\n"
             "Available files: doc/ documents only. There are NO CSV, JSON, or SQLite files.\n"
             "Steps:\n"
             "1. Call profile_context first.\n"
-            "2. Call retrieve_context multiple times with different focused queries to find all\n"
+            "2. Call plan_knowledge to read full knowledge.md definitions and rules before searching documents.\n"
+            "3. Identify requested output columns, filters, aggregation, ranking/ties, and units.\n"
+            "4. Call retrieve_context multiple times with different focused queries to find all\n"
             "   relevant values in the documents.\n"
-            "3. Track what you find in your 'thought' field as evidence notes.\n"
-            "4. Build the answer table ONLY from text you actually retrieved with tools.\n"
+            "5. Track what you find in your 'thought' field as evidence notes.\n"
+            "6. Build the answer table ONLY from text you actually retrieved with tools.\n"
             "   Do not assume or invent any values."
         ),
     }.get(
         task.difficulty.lower(),
-        "Call profile_context first, then retrieve or query what you need, then compute the answer.",
+        "Call profile_context first, then plan_knowledge, then retrieve or query what you need, then compute the answer.",
     )
 
     return (
@@ -245,7 +283,7 @@ def build_task_prompt(task: PublicTask) -> str:
         f"Question: {task.question}\n\n"
         f"{strategy}\n\n"
         "All file paths in tool calls must be relative to the context/ directory.\n"
-        "Start with profile_context. Validate the candidate data before calling answer."
+        "Start with profile_context, then call plan_knowledge. Validate the candidate data before calling answer."
     )
 
 

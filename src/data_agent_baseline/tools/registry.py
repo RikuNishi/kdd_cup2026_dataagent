@@ -8,7 +8,11 @@ from typing import Any, Callable
 
 from data_agent_baseline.benchmark.schema import AnswerTable, PublicTask
 from data_agent_baseline.tools.answer_validation import validate_answer_table
-from data_agent_baseline.tools.context_profile import build_context_profile, retrieve_context_chunks
+from data_agent_baseline.tools.context_profile import (
+    build_context_profile,
+    plan_knowledge_needs,
+    retrieve_context_chunks,
+)
 from data_agent_baseline.tools.data_query import execute_data_query
 from data_agent_baseline.tools.filesystem import (
     list_context_tree,
@@ -108,6 +112,15 @@ def _profile_context(task: PublicTask, _: dict[str, Any]) -> ToolExecutionResult
     """context profile 取得リクエストを処理する。"""
 
     return ToolExecutionResult(ok=True, content=build_context_profile(task))
+
+
+def _plan_knowledge(task: PublicTask, _: dict[str, Any]) -> ToolExecutionResult:
+    """knowledge.md 全文の確認リクエストを処理する。"""
+
+    return ToolExecutionResult(
+        ok=True,
+        content=plan_knowledge_needs(task),
+    )
 
 
 def _retrieve_context(task: PublicTask, action_input: dict[str, Any]) -> ToolExecutionResult:
@@ -266,7 +279,8 @@ def create_default_tool_registry() -> ToolRegistry:
             name="inspect_sqlite_schema",
             description=(
                 "Inspect the schema of a sqlite/db file inside `context/`, "
-                "returning user-defined tables and their CREATE statements."
+                "returning user-defined tables, columns, row counts, CREATE statements, "
+                "and sample preview rows from each table."
             ),
             input_schema={"path": "relative/path/to/file.sqlite"},
         ),
@@ -275,7 +289,17 @@ def create_default_tool_registry() -> ToolRegistry:
             description=(
                 "Build a deterministic profile of the task context before planning: files, "
                 "modalities, CSV columns, JSON shape, SQLite schemas, document headings, "
-                "knowledge.md location, and a difficulty-aware strategy."
+                "and a difficulty-aware strategy. It omits context/knowledge.md."
+            ),
+            input_schema={},
+        ),
+        "plan_knowledge": ToolSpec(
+            name="plan_knowledge",
+            description=(
+                "After profile_context, return the full context/knowledge.md content together "
+                "with a compact summary of the profiled data sources. Read it to identify "
+                "definitions, thresholds, terminology, and rules before choosing the next "
+                "query strategy."
             ),
             input_schema={},
         ),
@@ -346,6 +370,7 @@ def create_default_tool_registry() -> ToolRegistry:
         "execute_python": _execute_python,
         "inspect_sqlite_schema": _inspect_sqlite_schema,
         "list_context": _list_context,
+        "plan_knowledge": _plan_knowledge,
         "profile_context": _profile_context,
         "read_csv": _read_csv,
         "read_doc": _read_doc,

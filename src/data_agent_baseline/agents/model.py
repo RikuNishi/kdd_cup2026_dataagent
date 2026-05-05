@@ -1,10 +1,19 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from json import JSONDecodeError
 import time
 from typing import Any, Protocol
 
-from openai import APIConnectionError, APIError, APITimeoutError, BadRequestError, OpenAI, RateLimitError
+from openai import (
+    APIConnectionError,
+    APIError,
+    APIStatusError,
+    APITimeoutError,
+    BadRequestError,
+    OpenAI,
+    RateLimitError,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -85,7 +94,7 @@ class OpenAIModelAdapter:
             "response_format": {"type": "json_object"},
         }
 
-        last_error: APIError | None = None
+        last_error: Exception | None = None
         for attempt_index in range(self.max_retries + 1):
             try:
                 response = self._create_completion(client, request_payload)
@@ -104,6 +113,18 @@ class OpenAIModelAdapter:
             except EmptyModelResponseError as exc:
                 if attempt_index >= self.max_retries:
                     raise RuntimeError(str(exc)) from exc
+                time.sleep(min(2.0**attempt_index, 30.0))
+            except APIStatusError as exc:
+                if exc.status_code < 500:
+                    raise RuntimeError(f"Model request failed: {exc}") from exc
+                last_error = exc
+                if attempt_index >= self.max_retries:
+                    raise RuntimeError(f"Model request failed: {exc}") from exc
+                time.sleep(min(2.0**attempt_index, 30.0))
+            except JSONDecodeError as exc:
+                last_error = exc
+                if attempt_index >= self.max_retries:
+                    raise RuntimeError(f"Model response was not valid JSON: {exc}") from exc
                 time.sleep(min(2.0**attempt_index, 30.0))
             except APIError as exc:
                 raise RuntimeError(f"Model request failed: {exc}") from exc

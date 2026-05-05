@@ -1,6 +1,6 @@
 # agents コード概要
 
-`src/data_agent_baseline/agents/` は、ReAct 形式でモデルにツールを使わせ、最終回答を作るための実行基盤です。v2 では素の逐次 ReAct に加えて、`profile_context`、`retrieve_context`、`execute_data_query`、`validate_answer` を標準ツール化し、context scan、文書検索、横断クエリ、回答検査を明示的な手順として扱います。
+`src/data_agent_baseline/agents/` は、ReAct 形式でモデルにツールを使わせ、最終回答を作るための実行基盤です。v2 では素の逐次 ReAct に加えて、`profile_context`、`plan_knowledge`、`retrieve_context`、`execute_data_query`、`validate_answer` を標準ツール化し、context scan、knowledge 全文参照、文書検索、横断クエリ、回答検査を明示的な手順として扱います。
 
 ## 全体フロー
 
@@ -10,7 +10,7 @@
 4. `ModelAdapter.complete()` でモデルから次の行動を受け取る。
 5. `parse_model_step()` がモデル応答から `thought`, `action`, `action_input` を取り出す。
 6. `ToolRegistry.execute()` が指定ツールを実行し、結果を observation として保存する。
-7. 通常は `profile_context -> retrieve/query -> validate_answer -> answer` の順に進む。
+7. 通常は `profile_context -> plan_knowledge -> retrieve/query -> validate_answer -> answer` の順に進む。
 8. `answer` ツールが呼ばれるか、`max_steps` に到達するまで繰り返す。
 
 ## 現在の処理フロー
@@ -107,11 +107,13 @@ flowchart TD
 
 v2 は agent loop 自体を大きく分岐させず、モデルに公開するツールと prompt で solver 方針を固定します。
 
-- Easy: `profile_context` の後、CSV/JSON を `execute_python` または `execute_data_query` で処理する。
-- Medium: SQLite schema と CSV/JSON schema を先に見て、DB 単体は `execute_context_sql`、横断 join は `execute_data_query` を使う。
-- Hard/Extreme: `retrieve_context` で `knowledge.md` と `doc/*.md` から関連 chunk を集めてから、構造データの query と計算に進む。
+- Easy: `profile_context` と `plan_knowledge` の後、CSV/JSON を `execute_python` または `execute_data_query` で処理する。
+- Medium: `profile_context` と `plan_knowledge` の後、SQLite schema と CSV/JSON schema を見て、DB 単体は `execute_context_sql`、横断 join は `execute_data_query` を使う。
+- Hard/Extreme: `plan_knowledge` で `knowledge.md` 全文を確認し、`retrieve_context` で `doc/*.md` から関連 chunk を集めてから、構造データの query と計算に進む。
 
-`knowledge.md` は `context/knowledge.md` 直下を標準として扱います。存在しない `doc/knowledge.md` などのパスを決め打ちしないよう、system prompt と `profile_context` の `path_rules` で明示しています。
+各難易度で、質問理解、必要カラム・filter・join key・集計条件の確認、実データ preview、key 値や表記揺れの確認、計算、検証の順に進めます。DB も schema だけでなく `inspect_sqlite_schema` の preview rows や小さな `execute_context_sql` で実値を確認します。0 件・0 値が出た場合は、表記、case、空白、日付形式、null、code 定義を疑ってから採用します。回答値は元データの列を保ち、明示要求がない限り first/last name などを結合して新しい値を作りません。
+
+`knowledge.md` は `context/knowledge.md` 直下を標準として扱います。`profile_context` は `context/knowledge.md` を除外し、`plan_knowledge` が参照データ profile とあわせて `knowledge.md` 全文を返します。
 
 ## ファイル別の役割
 
@@ -168,13 +170,14 @@ ReAct の実行ループを担当する中心モジュールです。
 `tools/registry.py` でモデルに公開する tool を登録します。
 
 - `list_context`: `context/` 配下のファイル一覧を取得する。
-- `profile_context`: task の難易度、質問、存在ファイル、modality、CSV header/row count、JSON shape、SQLite schema、文書見出し、`knowledge.md` 位置をまとめて返す。
+- `profile_context`: task の難易度、質問、存在ファイル、modality、CSV header/row count、JSON shape、SQLite schema、文書見出しをまとめて返す。`context/knowledge.md` は除外する。
+- `plan_knowledge`: `profile_context` 後に、参照データ profile と `knowledge.md` 全文を返し、用語、閾値、ルール確認に使う。
 - `retrieve_context`: `knowledge.md` と `doc/*.md` から、質問・キーワードに関連する chunk を返す。
 - `read_csv`, `read_json`, `read_doc`: CSV/JSON/テキストのプレビューを取得する。
-- `inspect_sqlite_schema`, `execute_context_sql`: SQLite schema 確認と読み取り SQL 実行を行う。
+- `inspect_sqlite_schema`, `execute_context_sql`: SQLite schema、row count、preview rows 確認と読み取り SQL 実行を行う。
 - `execute_data_query`: CSV/JSON/SQLite を DuckDB 上に登録し、横断 SQL で join・集計・ranking を行う。JSON は `records` wrapper を table 化し、単一 table の SQLite は table 名で参照できる view も作る。
 - `execute_python`: `context/` 配下を working directory として Python を実行する。
-- `validate_answer`: 最終回答前に shape error、空回答、余分列、tie、複数行取りこぼし、数値表記のリスクを確認する。
+- `validate_answer`: 最終回答前に shape error、空回答、0 値、余分列、tie、複数行取りこぼし、数値表記、結合名らしさ、根拠不足のリスクを確認する。
 - `answer`: 最終回答 table を提出して task を終了する。
 
 ## 主要な入出力

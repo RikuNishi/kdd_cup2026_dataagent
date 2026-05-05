@@ -16,6 +16,12 @@ MULTI_ROW_QUESTION_PATTERN = re.compile(
     flags=re.IGNORECASE,
 )
 TIE_HINT_PATTERN = re.compile(r"\b(tie|tied|same|lowest|highest|minimum|maximum|most|least)\b", re.IGNORECASE)
+NAME_QUESTION_PATTERN = re.compile(r"\b(name|names|person|people|patient|patients|member|members)\b", re.IGNORECASE)
+SOURCE_EVIDENCE_PATTERN = re.compile(
+    r"\b(execute_data_query|execute_context_sql|execute_python|retrieve_context|read_doc|read_csv|read_json|"
+    r"sql|python|query|computed|calculated|grouped|filtered|joined|source|table|csv|json|db|doc)\b",
+    flags=re.IGNORECASE,
+)
 
 
 def _is_numeric_like(value: Any) -> bool:
@@ -26,6 +32,24 @@ def _is_numeric_like(value: Any) -> bool:
     except ValueError:
         return False
     return True
+
+
+def _numeric_value(value: Any) -> float | None:
+    """値を数値へ変換できる場合だけ float を返す。"""
+
+    try:
+        return float(str(value).strip())
+    except ValueError:
+        return None
+
+
+def _looks_like_joined_name(value: Any) -> bool:
+    """first/last name などを結合した値らしいかを緩く判定する。"""
+
+    text = str(value).strip()
+    if not text:
+        return False
+    return bool(re.search(r"\S+\s+\S+", text))
 
 
 def validate_answer_table(
@@ -86,6 +110,39 @@ def validate_answer_table(
     ]
     if numeric_cells and any("e" in str(value).lower() for value in numeric_cells):
         warnings.append("scientific notation detected; prefer a plain decimal string with sufficient precision.")
+
+    numeric_values = [
+        numeric_value
+        for value in numeric_cells
+        if (numeric_value := _numeric_value(value)) is not None
+    ]
+    if numeric_values and all(numeric_value == 0 for numeric_value in numeric_values):
+        warnings.append(
+            "all numeric answer values are zero; verify source formatting, labels, dates, nulls, and code/value mappings."
+        )
+
+    column_names = [column.lower().strip() for column in columns]
+    single_name_column = column_count == 1 and any("name" in column_name for column_name in column_names)
+    if NAME_QUESTION_PATTERN.search(question) and single_name_column:
+        joined_name_cells = [
+            value
+            for row in normalized_rows
+            if isinstance(row, list)
+            for value in row
+            if _looks_like_joined_name(value)
+        ]
+        if joined_name_cells:
+            warnings.append(
+                "single name column contains space-joined values; verify you did not concatenate first_name/last_name "
+                "or other source columns unless explicitly required."
+            )
+
+    if not notes.strip():
+        warnings.append("notes are empty; include the exact source tool/query used to compute the candidate answer.")
+    elif not SOURCE_EVIDENCE_PATTERN.search(notes):
+        warnings.append(
+            "notes do not mention a source data tool/query; verify the answer was computed from source data, not only observations."
+        )
 
     return {
         "ok": not errors,

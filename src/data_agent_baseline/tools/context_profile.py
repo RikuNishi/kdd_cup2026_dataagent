@@ -182,6 +182,8 @@ def build_context_profile(task: PublicTask) -> dict[str, Any]:
         if not path.is_file():
             continue
         rel_path = _relative_path(task, path)
+        if rel_path == "knowledge.md":
+            continue
         suffix = path.suffix.lower()
         entry: dict[str, Any] = {
             "path": rel_path,
@@ -199,12 +201,7 @@ def build_context_profile(task: PublicTask) -> dict[str, Any]:
                 modality_counter["json"] += 1
             elif suffix in {".md", ".txt"}:
                 entry.update(_profile_doc(path))
-                if rel_path == "knowledge.md":
-                    modality_counter["knowledge"] += 1
-                    entry["is_knowledge"] = True
-                else:
-                    modality_counter["doc"] += 1
-                    entry["is_knowledge"] = False
+                modality_counter["doc"] += 1
             else:
                 entry["type"] = "file"
         except Exception as exc:  # noqa: BLE001
@@ -225,7 +222,7 @@ def build_context_profile(task: PublicTask) -> dict[str, Any]:
         "strategy": choose_strategy(task.difficulty, modality_counter),
         "path_rules": [
             "Use only paths returned in this profile or by list_context.",
-            "knowledge.md is normally at context/knowledge.md, not doc/knowledge.md.",
+            "profile_context omits context/knowledge.md; call plan_knowledge before deciding whether definitions are needed.",
         ],
     }
 
@@ -234,13 +231,93 @@ def choose_strategy(difficulty: str, modality_counter: Counter[str]) -> str:
     """難易度と modality から推奨 solver 方針を返す。"""
 
     normalized = difficulty.lower()
-    has_docs = bool(modality_counter.get("doc") or modality_counter.get("knowledge"))
+    has_docs = bool(modality_counter.get("doc"))
     has_db = bool(modality_counter.get("db"))
     if normalized in {"hard", "extreme"} or (has_docs and normalized != "easy"):
-        return "retrieve-first: collect relevant doc/knowledge chunks, then query structured data."
+        return "retrieve-first: collect relevant document chunks, then query structured data."
     if has_db:
         return "schema-first: inspect/query SQLite and join CSV/JSON with execute_data_query when needed."
     return "python-first: load CSV/JSON directly and compute the answer."
+
+
+def _profile_sources_for_knowledge(profile: dict[str, Any], *, limit: int = 12) -> list[dict[str, Any]]:
+    """knowledge 計画で参照した profile 情報を短く返す。"""
+
+    sources: list[dict[str, Any]] = []
+    raw_files = profile.get("files", [])
+    if not isinstance(raw_files, list):
+        return sources
+
+    for raw_file in raw_files[:limit]:
+        if not isinstance(raw_file, dict):
+            continue
+        source: dict[str, Any] = {
+            "path": raw_file.get("path"),
+            "type": raw_file.get("type", "file"),
+        }
+        for key in ("columns", "top_level_keys", "record_columns", "headings"):
+            raw_values = raw_file.get(key)
+            if isinstance(raw_values, list) and raw_values:
+                source[key] = raw_values[:12]
+        raw_tables = raw_file.get("tables")
+        if isinstance(raw_tables, list) and raw_tables:
+            source["tables"] = [
+                {
+                    "name": table.get("name"),
+                    "columns": [
+                        column.get("name")
+                        for column in table.get("columns", [])
+                        if isinstance(column, dict)
+                    ][:12],
+                }
+                for table in raw_tables[:6]
+                if isinstance(table, dict) and isinstance(table.get("columns", []), list)
+            ]
+        sources.append(source)
+    return sources
+
+
+def plan_knowledge_needs(task: PublicTask) -> dict[str, Any]:
+    """質問と参照データ profile に添えて knowledge.md 全文を返す。"""
+
+    profile = build_context_profile(task)
+    knowledge_path = task.context_dir / "knowledge.md"
+    if not knowledge_path.is_file():
+        return {
+            "task_id": task.task_id,
+            "question": task.question,
+            "knowledge_path": "knowledge.md",
+            "knowledge_exists": False,
+            "profile_summary": {
+                "modalities": profile["modalities"],
+                "file_count": profile["file_count"],
+                "sources": _profile_sources_for_knowledge(profile),
+            },
+            "knowledge_content": "",
+            "knowledge_char_count": 0,
+            "recommended_next_steps": [
+                "No context/knowledge.md was found. Continue with structured data and doc files from profile_context."
+            ],
+        }
+
+    knowledge_content = _safe_read_text(knowledge_path)
+    return {
+        "task_id": task.task_id,
+        "question": task.question,
+        "knowledge_path": "knowledge.md",
+        "knowledge_exists": True,
+        "profile_summary": {
+            "modalities": profile["modalities"],
+            "file_count": profile["file_count"],
+            "sources": _profile_sources_for_knowledge(profile),
+        },
+        "knowledge_content": knowledge_content,
+        "knowledge_char_count": len(knowledge_content),
+        "recommended_next_steps": [
+            "Read the full knowledge_content and decide whether definitions, thresholds, code meanings, or filtering rules apply.",
+            "Use the profile_summary sources to choose the next structured or document query.",
+        ],
+    }
 
 
 def _tokens(text: str) -> set[str]:

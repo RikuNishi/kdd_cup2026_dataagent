@@ -14,7 +14,7 @@ def _connect_read_only(path: Path) -> sqlite3.Connection:
 
 
 def inspect_sqlite_schema(path: Path) -> dict[str, object]:
-    """ユーザー定義テーブル名と CREATE TABLE 文を返す。"""
+    """ユーザー定義テーブルの schema と先頭行 preview を返す。"""
 
     with _connect_read_only(path) as conn:
         rows = conn.execute(
@@ -27,10 +27,29 @@ def inspect_sqlite_schema(path: Path) -> dict[str, object]:
         ).fetchall()
         tables: list[dict[str, object]] = []
         for name, create_sql in rows:
+            table_info = conn.execute(f'PRAGMA table_info("{name}")').fetchall()
+            columns = [
+                {
+                    "name": row[1],
+                    "type": row[2],
+                    "not_null": bool(row[3]),
+                    "default_value": row[4],
+                    "primary_key": bool(row[5]),
+                }
+                for row in table_info
+            ]
+            row_count = conn.execute(f'SELECT COUNT(*) FROM "{name}"').fetchone()[0]
+            preview_cursor = conn.execute(f'SELECT * FROM "{name}" LIMIT 5')
+            preview_columns = [item[0] for item in preview_cursor.description or []]
+            preview_rows = [list(row) for row in preview_cursor.fetchall()]
             tables.append(
                 {
                     "name": name,
                     "create_sql": create_sql,
+                    "columns": columns,
+                    "row_count": row_count,
+                    "preview_columns": preview_columns,
+                    "preview_rows": preview_rows,
                 }
             )
     return {

@@ -81,6 +81,31 @@ def test_agent_error_observation_guides_repair_and_does_not_replay_invalid_assis
     assert any("previous response was invalid" in content for content in assistant_messages)
 
 
+def test_tool_error_observation_recommends_switching_tools(tmp_path: Path) -> None:
+    bad_tool_response = (
+        '{"thought":"try missing file","action":"read_csv",'
+        '"action_input":{"path":"csv/missing.csv","max_rows":5}}'
+    )
+    final_response = (
+        '{"thought":"done","action":"answer",'
+        '"action_input":{"columns":["result"],"rows":[["ok"]]}}'
+    )
+    model = RecordingModelAdapter([bad_tool_response, final_response])
+    agent = ReActAgent(
+        model=model,
+        tools=create_default_tool_registry(),
+        config=ReActAgentConfig(max_steps=2),
+    )
+
+    result = agent.run(_task(tmp_path))
+
+    assert result.succeeded
+    assert result.steps[0].action == "__error__"
+    assert result.steps[0].observation["failed_action"] == "read_csv"
+    assert "Do not repeat the same tool call" in str(result.steps[0].observation["repair_instruction"])
+    assert "execute_python" in str(result.steps[0].observation["fallback_examples"])
+
+
 def test_tool_descriptions_render_json_examples() -> None:
     descriptions = create_default_tool_registry().describe_for_prompt()
 
@@ -95,6 +120,7 @@ def test_agent_v2_tool_flow_profiles_queries_validates_and_answers(tmp_path: Pat
     (csv_dir / "value_scores.csv").write_text("name,score\nAda,10\nLin,20\n", encoding="utf-8")
     responses = [
         '{"thought":"profile first","action":"profile_context","action_input":{}}',
+        '{"thought":"plan knowledge","action":"plan_knowledge","action_input":{}}',
         (
             '{"thought":"query structured data","action":"execute_data_query",'
             '"action_input":{"sources":["csv/value_scores.csv"],'
@@ -113,7 +139,7 @@ def test_agent_v2_tool_flow_profiles_queries_validates_and_answers(tmp_path: Pat
     agent = ReActAgent(
         model=model,
         tools=create_default_tool_registry(),
-        config=ReActAgentConfig(max_steps=4),
+        config=ReActAgentConfig(max_steps=5),
     )
 
     result = agent.run(task)
@@ -121,6 +147,7 @@ def test_agent_v2_tool_flow_profiles_queries_validates_and_answers(tmp_path: Pat
     assert result.succeeded
     assert [step.action for step in result.steps] == [
         "profile_context",
+        "plan_knowledge",
         "execute_data_query",
         "validate_answer",
         "answer",

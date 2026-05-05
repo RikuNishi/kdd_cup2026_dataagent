@@ -196,17 +196,18 @@ baseline はモデルに次のツールを公開します。ツールに渡す�
 
 | ツール | 用途 |
 | --- | --- |
-| `profile_context` | 難易度、質問、存在ファイル、CSV header、JSON shape、SQLite schema、文書見出しなどをまとめて返します。 |
+| `profile_context` | 難易度、質問、存在ファイル、CSV header、JSON shape、SQLite schema、文書見出しなどをまとめて返します。`context/knowledge.md` は除外します。 |
+| `plan_knowledge` | `profile_context` 後に、参照データ情報とあわせて `knowledge.md` の全文を返し、用語、閾値、ルール確認に使います。 |
 | `retrieve_context` | `knowledge.md` や `doc/*.md` から、質問に関連する文書 chunk を返します。 |
 | `list_context` | `context/` 配下のファイルとディレクトリを一覧表示します。 |
 | `read_csv` | CSV の preview を読み込みます。 |
 | `read_json` | JSON の preview を読み込みます。 |
 | `read_doc` | テキスト文書の preview を読み込みます。 |
-| `inspect_sqlite_schema` | SQLite / DB ファイル内の table を調べます。 |
+| `inspect_sqlite_schema` | SQLite / DB ファイル内の table、columns、row count、先頭 preview rows を調べます。 |
 | `execute_context_sql` | `context/` 内の SQLite / DB ファイルに対して read-only SQL を実行します。 |
 | `execute_data_query` | CSV / JSON / SQLite を DuckDB 上に登録し、横断 SQL で join、集計、ranking を行います。 |
 | `execute_python` | タスクの `context/` ディレクトリ内で Python code を実行します。 |
-| `validate_answer` | 最終回答前に shape、空回答、余分列、tie、数値表記などのリスクを確認します。 |
+| `validate_answer` | 最終回答前に shape、空回答、0 値、余分列、tie、数値表記、結合名らしさ、根拠不足などのリスクを確認します。 |
 | `answer` | 最終回答 table を提出し、タスクを終了します。 |
 
 ## 主要モジュール
@@ -214,7 +215,7 @@ baseline はモデルに次のツールを公開します。ツールに渡す�
 | モジュール | 役割 |
 | --- | --- |
 | `src/data_agent_baseline/benchmark/dataset.py` | 公開 dataset loader |
-| `src/data_agent_baseline/tools/context_profile.py` | `profile_context`, `retrieve_context` |
+| `src/data_agent_baseline/tools/context_profile.py` | `profile_context`, `plan_knowledge`, `retrieve_context` |
 | `src/data_agent_baseline/tools/data_query.py` | `execute_data_query` |
 | `src/data_agent_baseline/tools/filesystem.py` | `list_context`, `read_csv`, `read_json`, `read_doc` |
 | `src/data_agent_baseline/tools/python_exec.py` | `execute_python` |
@@ -297,6 +298,7 @@ archive は 10GB 以下にしてください。
 ### 4. Google Drive 経由で提出
 
 `1560_v1.tar.gz` を Google Drive にアップロードし、「リンクを知っている全員が閲覧可」に設定してから、公式 Rules の形式でメール提出します。
+宛先：kddcup@hkust-gz.edu.cn
 
 ```text
 Subject: [KDDCup2026 Data Agents] Submission - 1560 - v1
@@ -325,6 +327,10 @@ Sharing link: <Google Drive link>
 
 | 日付 | 内容 |
 | --- | --- |
+| 2026-05-05 | `inspect_sqlite_schema` が DB table の schema だけでなく row count と preview rows も返すようにし、prompt で DB 実データ確認を明示。 |
+| 2026-05-05 | ReAct prompt を段階的なデータ確認・質問理解・計算重視に更新し、0 件/0 値・列結合・ツール失敗時の fallback 指示と回答検査 warning を追加。 |
+| 2026-05-05 | `plan_knowledge` ツールを追加し、`profile_context` 後に `knowledge.md` 全文を参照する workflow へ更新。 |
+| 2026-05-05 | `profile_context` が `context/knowledge.md` を profile 対象から除外するように変更。 |
 | 2026-05-04 | 難易度別 task prompt 戦略を `csv/json/db/doc/root` 分類ベースへ更新。 |
 | 2026-05-01 | v2 実行結果を `baseline_results` と公開 gold で比較し、平均 score が `0.527500` から `0.610000` へ改善したことを記録。 |
 | 2026-05-01 | v2 構造刷新として `profile_context`、`retrieve_context`、`execute_data_query`、`validate_answer` を実装し、難易度別 prompt、config の timeout/retry、既定 `max_workers=4` を整備。 |

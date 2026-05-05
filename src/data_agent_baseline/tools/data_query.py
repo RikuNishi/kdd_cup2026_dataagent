@@ -51,6 +51,24 @@ def _json_safe(value: Any) -> Any:
     return str(value)
 
 
+def _registered_source_hint(registered: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """クエリ修復用に、SQL で使える alias だけを短く返す。"""
+
+    hints: list[dict[str, Any]] = []
+    for item in registered:
+        hint: dict[str, Any] = {
+            "relative_path": item.get("relative_path"),
+            "type": item.get("type"),
+            "alias": item.get("alias"),
+        }
+        if item.get("view_alias"):
+            hint["view_alias"] = item.get("view_alias")
+        if item.get("aliases"):
+            hint["aliases"] = item.get("aliases")
+        hints.append(hint)
+    return hints
+
+
 def _safe_identifier(raw_name: str, used: set[str]) -> str:
     """DuckDB view/schema 名に使える identifier を作る。"""
 
@@ -247,7 +265,15 @@ def execute_data_query(
                 else:
                     raise ValueError(f"Unsupported source type: {rel_path}")
 
-            cursor = conn.execute(sql)
+            try:
+                cursor = conn.execute(sql)
+            except Exception as exc:
+                hints = _registered_source_hint(registered)
+                raise ValueError(
+                    "DuckDB query failed. In SQL, use the registered aliases, not file paths. "
+                    f"registered_sources={json.dumps(_json_safe(hints), ensure_ascii=False)}. "
+                    f"original_error={type(exc).__name__}: {exc}"
+                ) from exc
             columns = [item[0] for item in cursor.description or []]
             rows = cursor.fetchmany(limit + 1)
         finally:
