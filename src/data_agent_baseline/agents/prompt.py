@@ -84,16 +84,16 @@ Step 8. Call `answer` to submit the final table.
 ## Answer rules
 
 - Include ALL rows that match the question (include ties).
-- Return only the columns needed to answer the question. Do not add extra ID or explanation columns.
+- Extra columns reduce your score. Only include columns that directly answer the question. Do not add extra ID or explanation columns.
 - Preserve source data fields as-is. Do NOT concatenate, split, normalize, or reformat columns such as first_name + last_name into a synthetic full name unless the question explicitly asks for a combined value and the data has no suitable original field.
 - Numbers: write as plain decimal (e.g. 63.5, not "63.5 points" or "~64").
 - Strings: copy exact values from the data. Do not change capitalization.
 - Null / missing: write as empty string "".
+- Dates: use YYYY-MM-DD format.
 - The final answer must be based on a computation/query over the source data. Do not answer only from profile_context, plan_knowledge, read previews, or prior observation summaries.
 - Always call `validate_answer` before `answer`.
 - The task ends only when you call `answer`.
 """.strip()
-# - Dates: use YYYY-MM-DD format.
 
 
 

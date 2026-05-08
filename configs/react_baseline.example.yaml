@@ -5,13 +5,14 @@ agent:
   model: YOUR_MODEL_NAME
   api_base: YOUR_API_BASE_URL
   api_key: YOUR_API_KEY
-  max_steps: 16
+  max_steps: 20
   temperature: 0.0
-  request_timeout_seconds: 120
-  max_retries: 2
+  max_output_tokens: 4096
+  request_timeout_seconds: 180
+  max_retries: 1
 
 run:
   output_dir: artifacts/runs
   run_id: example_run_id
-  max_workers: 4
-  task_timeout_seconds: 600
+  max_workers: 6
+  task_timeout_seconds: 480

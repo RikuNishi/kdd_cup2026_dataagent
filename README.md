@@ -92,16 +92,17 @@ agent:
   model: YOUR_MODEL_NAME
   api_base: YOUR_API_BASE_URL
   api_key: YOUR_API_KEY
-  max_steps: 16
+  max_steps: 20
   temperature: 0.0
-  request_timeout_seconds: 120
-  max_retries: 2
+  max_output_tokens: 4096
+  request_timeout_seconds: 180
+  max_retries: 1
 
 run:
   output_dir: artifacts/runs
   run_id: example_run_id
-  max_workers: 4
-  task_timeout_seconds: 600
+  max_workers: 6
+  task_timeout_seconds: 480
 ```
 
 | 項目 | 意味 |
@@ -112,12 +113,15 @@ run:
 | `agent.api_key` | API key。 |
 | `agent.max_steps` | 1 タスクあたりの ReAct 最大ステップ数。 |
 | `agent.temperature` | サンプリング温度。 |
+| `agent.max_output_tokens` | 1 回のモデル応答の最大 token 数。公式 Qwen の大きな context window に頼りすぎず、JSON action / answer に十分な余裕を持たせます。 |
 | `agent.request_timeout_seconds` | モデル API request の timeout 秒数。 |
 | `agent.max_retries` | モデル API request の最大 retry 回数。 |
 | `run.output_dir` | 実行 artifact の出力ディレクトリ。 |
 | `run.run_id` | 任意の run ディレクトリ名。省略時は UTC timestamp が使われます。既存の run ディレクトリは拒否されます。 |
-| `run.max_workers` | `run-benchmark` の並列 worker 数。モデル API が詰まりやすい場合は `2`、十分安定している場合は `8` などへ調整してください。 |
-| `run.task_timeout_seconds` | 1 タスクあたりの最大 wall-clock 時間。`0` または負の値で無効化します。 |
+| `run.max_workers` | `run-benchmark` / `submit-run` の並列 worker 数。公式評価の 16 vCPU / 64 GB RAM、A-board 2 時間、全タスク合計 12 時間制限を前提に、初期値は `6` としています。モデル API が詰まりやすい場合は `4`、十分安定している場合は `8` などへ調整してください。 |
+| `run.task_timeout_seconds` | 1 タスクあたりの最大 wall-clock 時間。初期値 `480` 秒なら、A-board 約 60 タスクは worst-case でも約 80 分、B-board 約 320 タスクは約 7.1 時間で timeout 処理できます。`0` または負の値で無効化します。 |
+
+公式評価では `MODEL_API_URL`, `MODEL_API_KEY`, `MODEL_NAME` が注入されるため、提出 image 内で API endpoint や model name をハードコードしないでください。`submit-run` はこれらの環境変数を config より優先して読み込みます。
 
 ## ローカル実行
 
@@ -238,10 +242,26 @@ Archive filename: 1560_v1.tar.gz
 Team ID in email: 1560
 ```
 
+`v<N>` は提出ごとに必ずインクリメントし、同じバージョン番号を再利用しないでください。2 回目以降の例:
+
+```text
+Docker image tag: 1560:v2
+Archive filename: 1560_v2.tar.gz
+```
+
+### 公式評価の注意事項
+
+- ログにテストデータや gold answer を出力しないでください。公式ルール 3.7 では `/logs` の内容が主催者レビュー対象であり、テストセットのデータや gold answer を含むログを出力した場合、そのデータはデバッグサポート対象外になります。悪質なケースでは失格になる可能性があります。
+- `runtime.log` だけでなく、task ごとの `trace.json` にも注意してください。`trace.json` にはモデル応答、tool observation、最終回答が残るため、gold answer や hidden test の内容を不要に含めない設計にしてください。
+- 公式ルール 7 では、Phase 1 の A-board 約 60 タスクは評価 1 回あたり wall-clock 2 時間が上限です。全タスク合計の上限は 12 時間です。
+- 公式ルール 4.2 では、timeout / OOM 時は `SIGTERM`、30 秒待機、`SIGKILL` の順で container が終了します。すでに書き出された `prediction.csv` は採点対象ですが、未書き出しタスクは 0 点になります。
+- そのため、各タスクが完了した時点で即座に `/output/task_<id>/prediction.csv` を書き出すことが重要です。この実装の `submit-run` は task ごとに prediction と trace を保存します。
+- Phase 1 leaderboard は A-board 約 60 タスクと B-board 約 320 タスクに分かれ、最終スコアはデータ比率で重み付けされた合計です。同スコアの場合は、提出時刻が早いチームが上位になります。
+
 ### 1. Docker image を build
 
 ```bash
-docker build -t 1560:v1 .
+docker build --platform linux/amd64 -t 1560:v1 .
 ```
 
 entrypoint 確認:
@@ -257,9 +277,13 @@ docker image inspect 1560:v1 \
 ["/app/.venv/bin/dabench","submit-run"]
 ```
 
+ENTRYPOINT に `submit-run` が含まれているため、評価環境では追加パラメータなしで起動できます。`submit-run` は既定で `/input` を読み、`/output` に `task_<id>/prediction.csv`、`/logs` に `runtime.log` と task ごとの `trace.json` を出力します。
+
 ### 2. Docker image を疑似評価
 
 API key は Dockerfile や config に書かず、環境変数として渡します。
+
+軽量な起動確認:
 
 ```bash
 export MODEL_API_URL="https://openrouter.ai/api/v1"
@@ -279,12 +303,15 @@ docker run --rm \
   1560:v1 --limit 1
 ```
 
+本番相当の起動確認では、`--limit` を付けずに実行します。
+
 確認項目:
 
 - `/tmp/dabench-output/task_<id>/prediction.csv` が生成される。
 - `/tmp/dabench-logs/runtime.log` が生成される。
 - `/tmp/dabench-logs/task_<id>/trace.json` が生成される。
 - `data/public/input` が変更されていない。
+- `runtime.log` や `trace.json` に gold answer や hidden test の内容を不要に出力していない。
 
 ### 3. 提出用 archive を作成
 
@@ -308,6 +335,23 @@ Sharing link: <Google Drive link>
 ```
 
 評価完了通知を受け取るまで、Google Drive 上の archive は削除・変更しないでください。
+
+### 5. 公式 vLLM 起動コマンド
+
+参加者 container からこのコマンドを実行する必要はありません。評価時は `MODEL_API_URL`, `MODEL_API_KEY`, `MODEL_NAME` で注入される OpenAI 互換 endpoint を使います。
+
+```bash
+vllm serve <model_path> \
+  --host <host> --port <port> \
+  --tensor-parallel-size 8 \
+  --seed 1024 \
+  --served-model-name qwen3.5-35b-a3b \
+  --max-model-len 262144 \
+  --reasoning-parser qwen3 \
+  --enable-auto-tool-choice \
+  --tool-call-parser qwen3_coder \
+  --trust-remote-code
+```
 
 ## v2 改善結果メモ
 

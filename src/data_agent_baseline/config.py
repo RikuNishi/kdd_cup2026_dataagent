@@ -27,19 +27,19 @@ class AgentConfig:
     model: str = "gpt-4.1-mini"
     api_base: str = "https://api.openai.com/v1"
     api_key: str = ""
-    max_steps: int = 16
+    max_steps: int = 20
     temperature: float = 0.0
-    max_output_tokens: int = 2048
-    request_timeout_seconds: float = 120.0
-    max_retries: int = 2
+    max_output_tokens: int = 4096
+    request_timeout_seconds: float = 180.0
+    max_retries: int = 1
 
 
 @dataclass(frozen=True, slots=True)
 class RunConfig:
     output_dir: Path = field(default_factory=_default_run_output_dir)
     run_id: str | None = None
-    max_workers: int = 4
-    task_timeout_seconds: int = 600
+    max_workers: int = 6
+    task_timeout_seconds: int = 480
 
 
 @dataclass(frozen=True, slots=True)
