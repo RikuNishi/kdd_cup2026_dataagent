@@ -293,7 +293,7 @@ export MODEL_NAME="qwen3.5-35b-a3b"
 rm -rf /tmp/dabench-output /tmp/dabench-logs
 mkdir -p /tmp/dabench-output /tmp/dabench-logs
 
-docker run --rm \
+docker run --rm --platform linux/amd64 \
   -v "$PWD/data/public/input:/input:ro" \
   -v /tmp/dabench-output:/output \
   -v /tmp/dabench-logs:/logs \
