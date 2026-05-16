@@ -93,7 +93,7 @@ agent:
   api_base: YOUR_API_BASE_URL
   api_key: YOUR_API_KEY
   max_steps: 20
-  temperature: 0.0
+  temperature: 0.5
   max_output_tokens: 4096
   request_timeout_seconds: 180
   max_retries: 1
@@ -103,6 +103,24 @@ run:
   run_id: example_run_id
   max_workers: 6
   task_timeout_seconds: 480
+
+difficulty_overrides:
+  easy:
+    max_steps: 8
+    max_retries: 1
+    task_timeout_seconds: 180
+  medium:
+    max_steps: 16
+    max_retries: 1
+    task_timeout_seconds: 360
+  hard:
+    max_steps: 24
+    max_retries: 2
+    task_timeout_seconds: 900
+  extreme:
+    max_steps: 10
+    max_retries: 1
+    task_timeout_seconds: 90
 ```
 
 | 項目 | 意味 |
@@ -119,7 +137,10 @@ run:
 | `run.output_dir` | 実行 artifact の出力ディレクトリ。 |
 | `run.run_id` | 任意の run ディレクトリ名。省略時は UTC timestamp が使われます。既存の run ディレクトリは拒否されます。 |
 | `run.max_workers` | `run-benchmark` / `submit-run` の並列 worker 数。公式評価の 16 vCPU / 64 GB RAM、A-board 2 時間、全タスク合計 12 時間制限を前提に、初期値は `6` としています。モデル API が詰まりやすい場合は `4`、十分安定している場合は `8` などへ調整してください。 |
-| `run.task_timeout_seconds` | 1 タスクあたりの最大 wall-clock 時間。初期値 `480` 秒なら、A-board 約 60 タスクは worst-case でも約 80 分、B-board 約 320 タスクは約 7.1 時間で timeout 処理できます。`0` または負の値で無効化します。 |
+| `run.task_timeout_seconds` | 1 タスクあたりの最大 wall-clock 時間。難易度別 override がない場合の fallback です。`0` または負の値で無効化します。 |
+| `difficulty_overrides.<difficulty>.max_steps` | `easy` / `medium` / `hard` / `extreme` ごとの ReAct 最大ステップ数。未指定の難易度や項目は `agent.max_steps` に fallback します。 |
+| `difficulty_overrides.<difficulty>.max_retries` | 難易度ごとのモデル API request retry 回数。未指定の難易度や項目は `agent.max_retries` に fallback します。 |
+| `difficulty_overrides.<difficulty>.task_timeout_seconds` | 難易度ごとのタスク単位 timeout 秒数。提出用の既定例は `extreme=90`、`easy=180`、`medium=360`、`hard=900` 秒です。A-board 57 問の実分布なら `max_workers=6` で worst-case 約 1.59 時間、B-board 324 問なら約 7.65 時間です。未指定の難易度や項目は `run.task_timeout_seconds` に fallback します。 |
 
 公式評価では `MODEL_API_URL`, `MODEL_API_KEY`, `MODEL_NAME` が注入されるため、提出 image 内で API endpoint や model name をハードコードしないでください。`submit-run` はこれらの環境変数を config より優先して読み込みます。
 
@@ -371,6 +392,8 @@ vllm serve <model_path> \
 
 | 日付 | 内容 |
 | --- | --- |
+| 2026-05-16 | A-board 57 問、B-board 324 問の難易度分布と評価環境の `max_workers=6` を前提に、提出用の難易度別 timeout を `extreme=90`、`easy=180`、`medium=360`、`hard=900` 秒へ調整。 |
+| 2026-05-16 | `easy` / `medium` / `hard` / `extreme` ごとに `max_steps`、`max_retries`、`task_timeout_seconds` を override できる設定を追加。 |
 | 2026-05-05 | `inspect_sqlite_schema` が DB table の schema だけでなく row count と preview rows も返すようにし、prompt で DB 実データ確認を明示。 |
 | 2026-05-05 | ReAct prompt を段階的なデータ確認・質問理解・計算重視に更新し、0 件/0 値・列結合・ツール失敗時の fallback 指示と回答検査 warning を追加。 |
 | 2026-05-05 | `plan_knowledge` ツールを追加し、`profile_context` 後に `knowledge.md` 全文を参照する workflow へ更新。 |

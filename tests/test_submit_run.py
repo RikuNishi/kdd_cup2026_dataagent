@@ -8,8 +8,11 @@ from data_agent_baseline.config import (
     AgentConfig,
     AppConfig,
     DatasetConfig,
+    DifficultyRuntimeOverride,
     RunConfig,
     apply_model_env_overrides,
+    load_app_config,
+    resolve_runtime_config,
 )
 from data_agent_baseline.run.runner import run_submit_benchmark
 from data_agent_baseline.tools.registry import create_default_tool_registry
@@ -27,13 +30,13 @@ class SequentialModelAdapter:
         return self.responses.pop(0)
 
 
-def _write_task(root_dir: Path, task_id: str) -> str:
+def _write_task(root_dir: Path, task_id: str, *, difficulty: str = "easy") -> str:
     task_dir = root_dir / task_id
     context_dir = task_dir / "context"
     context_dir.mkdir(parents=True)
     payload = {
         "task_id": task_id,
-        "difficulty": "easy",
+        "difficulty": difficulty,
         "question": f"Return answer for {task_id}.",
     }
     rendered = json.dumps(payload, ensure_ascii=False)
@@ -82,6 +85,37 @@ def test_model_env_overrides_take_precedence(monkeypatch) -> None:
     assert updated.agent.max_steps == config.agent.max_steps
     assert updated.agent.request_timeout_seconds == config.agent.request_timeout_seconds
     assert updated.agent.max_retries == config.agent.max_retries
+
+
+def test_difficulty_runtime_overrides_are_resolved(tmp_path: Path) -> None:
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        """
+dataset:
+  root_path: data/public/input
+agent:
+  max_steps: 20
+  max_retries: 1
+run:
+  task_timeout_seconds: 480
+difficulty_overrides:
+  hard:
+    max_steps: 32
+    max_retries: 2
+    task_timeout_seconds: 900
+""".lstrip()
+    )
+
+    config = load_app_config(config_path)
+
+    hard_runtime = resolve_runtime_config(config, "hard")
+    easy_runtime = resolve_runtime_config(config, "easy")
+    assert hard_runtime.max_steps == 32
+    assert hard_runtime.max_retries == 2
+    assert hard_runtime.task_timeout_seconds == 900
+    assert easy_runtime.max_steps == 20
+    assert easy_runtime.max_retries == 1
+    assert easy_runtime.task_timeout_seconds == 480
 
 
 def test_submit_run_writes_prediction_to_output_and_trace_to_logs(tmp_path: Path) -> None:
@@ -136,3 +170,44 @@ def test_submit_run_continues_after_task_failure(tmp_path: Path) -> None:
     assert (output_dir / "task_2" / "prediction.csv").read_text() == "result\nsecond-ok\n"
     assert (logs_dir / "task_1" / "trace.json").exists()
     assert (logs_dir / "task_2" / "trace.json").exists()
+
+
+def test_submit_run_uses_difficulty_specific_max_steps(tmp_path: Path) -> None:
+    input_dir = tmp_path / "input"
+    output_dir = tmp_path / "output"
+    logs_dir = tmp_path / "logs"
+    _write_task(input_dir, "task_1", difficulty="hard")
+    model = SequentialModelAdapter(
+        [
+            '{"thought":"bad first step","action":"answer","action_input":"not-object"}',
+            _answer_response("hard-ok"),
+        ]
+    )
+    config = AppConfig(
+        dataset=DatasetConfig(root_path=input_dir),
+        agent=AgentConfig(
+            model="local-model",
+            api_base="https://example.invalid/v1",
+            api_key="local-key",
+            max_steps=1,
+            temperature=0.0,
+        ),
+        run=RunConfig(max_workers=1, task_timeout_seconds=0),
+        difficulty_overrides={
+            "hard": DifficultyRuntimeOverride(max_steps=2),
+        },
+    )
+
+    artifacts = run_submit_benchmark(
+        config=config,
+        output_dir=output_dir,
+        logs_dir=logs_dir,
+        model=model,
+        tools=create_default_tool_registry(),
+    )
+
+    assert artifacts[0].succeeded
+    assert (output_dir / "task_1" / "prediction.csv").read_text() == "result\nhard-ok\n"
+    trace_payload = json.loads((logs_dir / "task_1" / "trace.json").read_text())
+    assert trace_payload["runtime_config"]["difficulty"] == "hard"
+    assert trace_payload["runtime_config"]["max_steps"] == 2

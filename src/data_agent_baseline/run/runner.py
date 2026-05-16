@@ -14,7 +14,7 @@ from typing import Any
 from data_agent_baseline.agents.model import OpenAIModelAdapter
 from data_agent_baseline.agents.react import ReActAgent, ReActAgentConfig
 from data_agent_baseline.benchmark.dataset import DABenchPublicDataset
-from data_agent_baseline.config import AppConfig
+from data_agent_baseline.config import AppConfig, resolve_runtime_config
 from data_agent_baseline.tools.registry import ToolRegistry, create_default_tool_registry
 
 
@@ -61,7 +61,9 @@ def create_run_output_dir(output_root: Path, *, run_id: str | None = None) -> tu
     return effective_run_id, run_output_dir
 
 
-def build_model_adapter(config: AppConfig):
+def build_model_adapter(config: AppConfig, *, max_retries: int | None = None):
+    """モデル adapter を設定から生成する。"""
+
     return OpenAIModelAdapter(
         model=config.agent.model,
         api_base=config.agent.api_base,
@@ -69,7 +71,7 @@ def build_model_adapter(config: AppConfig):
         temperature=config.agent.temperature,
         max_output_tokens=config.agent.max_output_tokens,
         request_timeout_seconds=config.agent.request_timeout_seconds,
-        max_retries=config.agent.max_retries,
+        max_retries=max_retries if max_retries is not None else config.agent.max_retries,
     )
 
 
@@ -108,14 +110,22 @@ def _run_single_task_core(
 ) -> dict[str, Any]:
     public_dataset = DABenchPublicDataset(config.dataset.root_path)
     task = public_dataset.get_task(task_id)
+    runtime_config = resolve_runtime_config(config, task.difficulty)
 
     agent = ReActAgent(
-        model=model or build_model_adapter(config),
+        model=model or build_model_adapter(config, max_retries=runtime_config.max_retries),
         tools=tools or create_default_tool_registry(),
-        config=ReActAgentConfig(max_steps=config.agent.max_steps),
+        config=ReActAgentConfig(max_steps=runtime_config.max_steps),
     )
     run_result = agent.run(task)
-    return run_result.to_dict()
+    payload = run_result.to_dict()
+    payload["runtime_config"] = {
+        "difficulty": task.difficulty,
+        "max_steps": runtime_config.max_steps,
+        "max_retries": runtime_config.max_retries,
+        "task_timeout_seconds": runtime_config.task_timeout_seconds,
+    }
+    return payload
 
 
 def _run_single_task_in_subprocess(task_id: str, config: AppConfig, queue: multiprocessing.Queue[Any]) -> None:
@@ -136,7 +146,10 @@ def _run_single_task_in_subprocess(task_id: str, config: AppConfig, queue: multi
 
 
 def _run_single_task_with_timeout(*, task_id: str, config: AppConfig) -> dict[str, Any]:
-    timeout_seconds = config.run.task_timeout_seconds
+    public_dataset = DABenchPublicDataset(config.dataset.root_path)
+    task = public_dataset.get_task(task_id)
+    runtime_config = resolve_runtime_config(config, task.difficulty)
+    timeout_seconds = runtime_config.task_timeout_seconds
     if timeout_seconds <= 0:
         return _run_single_task_core(task_id=task_id, config=config)
 
@@ -154,7 +167,14 @@ def _run_single_task_with_timeout(*, task_id: str, config: AppConfig) -> dict[st
         if process.is_alive():
             process.kill()
             process.join()
-        return _failure_run_result_payload(task_id, f"Task timed out after {timeout_seconds} seconds.")
+        payload = _failure_run_result_payload(task_id, f"Task timed out after {timeout_seconds} seconds.")
+        payload["runtime_config"] = {
+            "difficulty": task.difficulty,
+            "max_steps": runtime_config.max_steps,
+            "max_retries": runtime_config.max_retries,
+            "task_timeout_seconds": runtime_config.task_timeout_seconds,
+        }
+        return payload
 
     if queue.empty():
         exit_code = process.exitcode
@@ -292,8 +312,8 @@ def run_benchmark(
 
     task_artifacts: list[TaskRunArtifacts]
     if effective_workers == 1:
-        shared_model = model or build_model_adapter(config)
-        shared_tools = tools or create_default_tool_registry()
+        shared_model = model
+        shared_tools = tools
         task_artifacts = []
         for task_id in task_ids:
             artifact = run_single_task(
@@ -366,8 +386,8 @@ def run_submit_benchmark(
 
     task_ids = [task.task_id for task in tasks]
     if effective_workers == 1:
-        shared_model = model or build_model_adapter(config)
-        shared_tools = tools or create_default_tool_registry()
+        shared_model = model
+        shared_tools = tools
         task_artifacts = []
         for task_id in task_ids:
             artifact = run_submit_task(

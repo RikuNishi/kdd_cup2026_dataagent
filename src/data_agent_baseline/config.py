@@ -43,10 +43,25 @@ class RunConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class DifficultyRuntimeOverride:
+    max_steps: int | None = None
+    max_retries: int | None = None
+    task_timeout_seconds: int | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class ResolvedRuntimeConfig:
+    max_steps: int
+    max_retries: int
+    task_timeout_seconds: int
+
+
+@dataclass(frozen=True, slots=True)
 class AppConfig:
     dataset: DatasetConfig = field(default_factory=DatasetConfig)
     agent: AgentConfig = field(default_factory=AgentConfig)
     run: RunConfig = field(default_factory=RunConfig)
+    difficulty_overrides: dict[str, DifficultyRuntimeOverride] = field(default_factory=dict)
 
 
 def _path_value(raw_value: str | None, default_value: Path) -> Path:
@@ -56,6 +71,39 @@ def _path_value(raw_value: str | None, default_value: Path) -> Path:
     if candidate.is_absolute():
         return candidate
     return (PROJECT_ROOT / candidate).resolve()
+
+
+def _optional_int(payload: dict, key: str) -> int | None:
+    """設定 dict から任意の整数値を取り出す。"""
+
+    raw_value = payload.get(key)
+    if raw_value is None:
+        return None
+    return int(raw_value)
+
+
+def _load_difficulty_overrides(payload: dict) -> dict[str, DifficultyRuntimeOverride]:
+    """難易度別の実行設定 override を読み込む。"""
+
+    overrides_payload = payload.get("difficulty_overrides", {})
+    if not isinstance(overrides_payload, dict):
+        raise ValueError("difficulty_overrides must be a mapping.")
+
+    overrides: dict[str, DifficultyRuntimeOverride] = {}
+    for raw_difficulty, raw_override in overrides_payload.items():
+        if raw_override is None:
+            continue
+        if not isinstance(raw_override, dict):
+            raise ValueError(f"difficulty_overrides.{raw_difficulty} must be a mapping.")
+        difficulty = str(raw_difficulty).strip().lower()
+        if not difficulty:
+            raise ValueError("difficulty_overrides keys must not be empty.")
+        overrides[difficulty] = DifficultyRuntimeOverride(
+            max_steps=_optional_int(raw_override, "max_steps"),
+            max_retries=_optional_int(raw_override, "max_retries"),
+            task_timeout_seconds=_optional_int(raw_override, "task_timeout_seconds"),
+        )
+    return overrides
 
 
 def load_app_config(config_path: Path) -> AppConfig:
@@ -100,7 +148,27 @@ def load_app_config(config_path: Path) -> AppConfig:
         max_workers=int(run_payload.get("max_workers", run_defaults.max_workers)),
         task_timeout_seconds=int(run_payload.get("task_timeout_seconds", run_defaults.task_timeout_seconds)),
     )
-    return AppConfig(dataset=dataset_config, agent=agent_config, run=run_config)
+    return AppConfig(
+        dataset=dataset_config,
+        agent=agent_config,
+        run=run_config,
+        difficulty_overrides=_load_difficulty_overrides(payload),
+    )
+
+
+def resolve_runtime_config(config: AppConfig, difficulty: str) -> ResolvedRuntimeConfig:
+    """難易度別 override を反映したタスク実行設定を返す。"""
+
+    override = config.difficulty_overrides.get(difficulty.strip().lower())
+    return ResolvedRuntimeConfig(
+        max_steps=override.max_steps if override and override.max_steps is not None else config.agent.max_steps,
+        max_retries=override.max_retries if override and override.max_retries is not None else config.agent.max_retries,
+        task_timeout_seconds=(
+            override.task_timeout_seconds
+            if override and override.task_timeout_seconds is not None
+            else config.run.task_timeout_seconds
+        ),
+    )
 
 
 def apply_model_env_overrides(config: AppConfig) -> AppConfig:
@@ -126,4 +194,9 @@ def apply_model_env_overrides(config: AppConfig) -> AppConfig:
         request_timeout_seconds=config.agent.request_timeout_seconds,
         max_retries=config.agent.max_retries,
     )
-    return AppConfig(dataset=config.dataset, agent=agent_config, run=config.run)
+    return AppConfig(
+        dataset=config.dataset,
+        agent=agent_config,
+        run=config.run,
+        difficulty_overrides=config.difficulty_overrides,
+    )
