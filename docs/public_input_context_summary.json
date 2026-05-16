@@ -1,0 +1,5578 @@
+{
+  "task_count": 50,
+  "difficulty_counts": {
+    "easy": 15,
+    "medium": 23,
+    "hard": 11,
+    "extreme": 1
+  },
+  "format_counts": {
+    "csv": 40,
+    "db": 27,
+    "doc": 14,
+    "json": 37
+  },
+  "difficulty_summary": {
+    "easy": {
+      "task_count": 15,
+      "format_counts": {
+        "csv": 15,
+        "json": 20
+      }
+    },
+    "medium": {
+      "task_count": 23,
+      "format_counts": {
+        "csv": 17,
+        "db": 23,
+        "json": 15
+      }
+    },
+    "hard": {
+      "task_count": 11,
+      "format_counts": {
+        "csv": 8,
+        "db": 4,
+        "doc": 12,
+        "json": 2
+      }
+    },
+    "extreme": {
+      "task_count": 1,
+      "format_counts": {
+        "doc": 2
+      }
+    }
+  },
+  "tasks": [
+    {
+      "task_id": "task_11",
+      "task_json": {
+        "difficulty": "easy",
+        "question": "For patients with severe degree of thrombosis, list their ID, sex and disease the patient is diagnosed with."
+      },
+      "context": {
+        "format_counts": {
+          "json": 2
+        },
+        "files": [
+          {
+            "path": "json/Examination.json",
+            "context_folder": "json",
+            "data_format": "json",
+            "size_bytes": 253093,
+            "fully_loaded": true,
+            "top_level_keys": [
+              "table",
+              "records"
+            ]
+          },
+          {
+            "path": "json/Patient.json",
+            "context_folder": "json",
+            "data_format": "json",
+            "size_bytes": 249904,
+            "fully_loaded": true,
+            "top_level_keys": [
+              "table",
+              "records"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "task_19",
+      "task_json": {
+        "difficulty": "easy",
+        "question": "List the full name of the Student_Club members that grew up in Illinois state."
+      },
+      "context": {
+        "format_counts": {
+          "csv": 1,
+          "json": 1
+        },
+        "files": [
+          {
+            "path": "csv/member.csv",
+            "context_folder": "csv",
+            "data_format": "csv",
+            "size_bytes": 3575,
+            "column_count": 9,
+            "columns": [
+              "member_id",
+              "first_name",
+              "last_name",
+              "email",
+              "position",
+              "t_shirt_size",
+              "phone",
+              "zip",
+              "link_to_major"
+            ],
+            "row_count": 33,
+            "sample_rows": [
+              [
+                "rec1x5zBFIqoOuPW8",
+                "Angela",
+                "Sanders",
+                "angela.sanders@lpu.edu",
+                "Member",
+                "Medium",
+                "(651) 928-4507",
+                "55108",
+                "recxK3MHQFbR9J5uO"
+              ]
+            ]
+          },
+          {
+            "path": "json/zip_code.json",
+            "context_folder": "json",
+            "data_format": "json",
+            "size_bytes": 7443215,
+            "fully_loaded": true,
+            "top_level_keys": [
+              "table",
+              "records"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "task_22",
+      "task_json": {
+        "difficulty": "easy",
+        "question": "State the date Connor Hilton paid his/her dues."
+      },
+      "context": {
+        "format_counts": {
+          "csv": 1,
+          "json": 1
+        },
+        "files": [
+          {
+            "path": "csv/income.csv",
+            "context_folder": "csv",
+            "data_format": "csv",
+            "size_bytes": 2245,
+            "column_count": 6,
+            "columns": [
+              "income_id",
+              "date_received",
+              "amount",
+              "source",
+              "notes",
+              "link_to_member"
+            ],
+            "row_count": 36,
+            "sample_rows": [
+              [
+                "rec0s9ZrO15zhzUeE",
+                "2019-10-17",
+                "50",
+                "Dues",
+                "",
+                "reccW7q1KkhSKZsea"
+              ]
+            ]
+          },
+          {
+            "path": "json/member.json",
+            "context_folder": "json",
+            "data_format": "json",
+            "size_bytes": 10135,
+            "fully_loaded": true,
+            "top_level_keys": [
+              "table",
+              "records"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "task_24",
+      "task_json": {
+        "difficulty": "easy",
+        "question": "How many members attended the \"Women's Soccer\" event?"
+      },
+      "context": {
+        "format_counts": {
+          "csv": 1,
+          "json": 1
+        },
+        "files": [
+          {
+            "path": "csv/attendance.csv",
+            "context_folder": "csv",
+            "data_format": "csv",
+            "size_bytes": 12092,
+            "column_count": 2,
+            "columns": [
+              "link_to_event",
+              "link_to_member"
+            ],
+            "row_count": 326,
+            "sample_rows": [
+              [
+                "rec2N69DMcrqN9PJC",
+                "recD078PnS3x2doBe"
+              ]
+            ]
+          },
+          {
+            "path": "json/event.json",
+            "context_folder": "json",
+            "data_format": "json",
+            "size_bytes": 11197,
+            "fully_loaded": true,
+            "top_level_keys": [
+              "table",
+              "records"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "task_25",
+      "task_json": {
+        "difficulty": "easy",
+        "question": "Which event has the lowest cost?"
+      },
+      "context": {
+        "format_counts": {
+          "csv": 1,
+          "json": 2
+        },
+        "files": [
+          {
+            "path": "csv/budget.csv",
+            "context_folder": "csv",
+            "data_format": "csv",
+            "size_bytes": 3598,
+            "column_count": 7,
+            "columns": [
+              "budget_id",
+              "category",
+              "spent",
+              "remaining",
+              "amount",
+              "event_status",
+              "link_to_event"
+            ],
+            "row_count": 52,
+            "sample_rows": [
+              [
+                "rec0QmEc3cSQFQ6V2",
+                "Advertisement",
+                "67.81",
+                "7.19",
+                "75",
+                "Closed",
+                "recI43CzsZ0Q625ma"
+              ]
+            ]
+          },
+          {
+            "path": "json/event.json",
+            "context_folder": "json",
+            "data_format": "json",
+            "size_bytes": 11197,
+            "fully_loaded": true,
+            "top_level_keys": [
+              "table",
+              "records"
+            ]
+          },
+          {
+            "path": "json/expense.json",
+            "context_folder": "json",
+            "data_format": "json",
+            "size_bytes": 8704,
+            "fully_loaded": true,
+            "top_level_keys": [
+              "table",
+              "records"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "task_26",
+      "task_json": {
+        "difficulty": "easy",
+        "question": "How many members of the Student_Club have major in 'Physics Teaching'?"
+      },
+      "context": {
+        "format_counts": {
+          "json": 2
+        },
+        "files": [
+          {
+            "path": "json/major.json",
+            "context_folder": "json",
+            "data_format": "json",
+            "size_bytes": 24152,
+            "fully_loaded": true,
+            "top_level_keys": [
+              "table",
+              "records"
+            ]
+          },
+          {
+            "path": "json/member.json",
+            "context_folder": "json",
+            "data_format": "json",
+            "size_bytes": 10135,
+            "fully_loaded": true,
+            "top_level_keys": [
+              "table",
+              "records"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "task_27",
+      "task_json": {
+        "difficulty": "easy",
+        "question": "List out the full name and total cost that member id \"rec4BLdZHS2Blfp4v\" incurred?"
+      },
+      "context": {
+        "format_counts": {
+          "json": 2
+        },
+        "files": [
+          {
+            "path": "json/expense.json",
+            "context_folder": "json",
+            "data_format": "json",
+            "size_bytes": 8704,
+            "fully_loaded": true,
+            "top_level_keys": [
+              "table",
+              "records"
+            ]
+          },
+          {
+            "path": "json/member.json",
+            "context_folder": "json",
+            "data_format": "json",
+            "size_bytes": 10135,
+            "fully_loaded": true,
+            "top_level_keys": [
+              "table",
+              "records"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "task_38",
+      "task_json": {
+        "difficulty": "easy",
+        "question": "List all the withdrawals in cash transactions that the client with the id 3356 makes."
+      },
+      "context": {
+        "format_counts": {
+          "csv": 2,
+          "json": 2
+        },
+        "files": [
+          {
+            "path": "csv/disp.csv",
+            "context_folder": "csv",
+            "data_format": "csv",
+            "size_bytes": 118970,
+            "column_count": 4,
+            "columns": [
+              "disp_id",
+              "client_id",
+              "account_id",
+              "type"
+            ],
+            "row_count": 5369,
+            "sample_rows": [
+              [
+                "1",
+                "1",
+                "1",
+                "OWNER"
+              ]
+            ]
+          },
+          {
+            "path": "csv/trans.csv",
+            "context_folder": "csv",
+            "data_format": "csv",
+            "size_bytes": 59775097,
+            "column_count": 10,
+            "columns": [
+              "trans_id",
+              "account_id",
+              "date",
+              "type",
+              "operation",
+              "amount",
+              "balance",
+              "k_symbol",
+              "bank",
+              "account"
+            ],
+            "row_count": 1056320,
+            "sample_rows": [
+              [
+                "1",
+                "1",
+                "1995-03-24",
+                "PRIJEM",
+                "VKLAD",
+                "1000",
+                "1000",
+                "",
+                "",
+                ""
+              ]
+            ]
+          },
+          {
+            "path": "json/account.json",
+            "context_folder": "json",
+            "data_format": "json",
+            "size_bytes": 582852,
+            "fully_loaded": true,
+            "top_level_keys": [
+              "table",
+              "records"
+            ]
+          },
+          {
+            "path": "json/client.json",
+            "context_folder": "json",
+            "data_format": "json",
+            "size_bytes": 626351,
+            "fully_loaded": true,
+            "top_level_keys": [
+              "table",
+              "records"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "task_64",
+      "task_json": {
+        "difficulty": "easy",
+        "question": "Please list all the superpowers of 3-D Man."
+      },
+      "context": {
+        "format_counts": {
+          "csv": 2,
+          "json": 1
+        },
+        "files": [
+          {
+            "path": "csv/hero_power.csv",
+            "context_folder": "csv",
+            "data_format": "csv",
+            "size_bytes": 45546,
+            "column_count": 2,
+            "columns": [
+              "hero_id",
+              "power_id"
+            ],
+            "row_count": 5825,
+            "sample_rows": [
+              [
+                "1",
+                "1"
+              ]
+            ]
+          },
+          {
+            "path": "csv/superpower.csv",
+            "context_folder": "csv",
+            "data_format": "csv",
+            "size_bytes": 3188,
+            "column_count": 2,
+            "columns": [
+              "id",
+              "power_name"
+            ],
+            "row_count": 167,
+            "sample_rows": [
+              [
+                "1",
+                "Agility"
+              ]
+            ]
+          },
+          {
+            "path": "json/superhero.json",
+            "context_folder": "json",
+            "data_format": "json",
+            "size_bytes": 240215,
+            "fully_loaded": true,
+            "top_level_keys": [
+              "table",
+              "records"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "task_67",
+      "task_json": {
+        "difficulty": "easy",
+        "question": "What is the average weight of all female superheroes?"
+      },
+      "context": {
+        "format_counts": {
+          "csv": 1,
+          "json": 1
+        },
+        "files": [
+          {
+            "path": "csv/superhero.csv",
+            "context_folder": "csv",
+            "data_format": "csv",
+            "size_bytes": 36279,
+            "column_count": 12,
+            "columns": [
+              "id",
+              "superhero_name",
+              "full_name",
+              "gender_id",
+              "eye_colour_id",
+              "hair_colour_id",
+              "skin_colour_id",
+              "race_id",
+              "publisher_id",
+              "alignment_id",
+              "height_cm",
+              "weight_kg"
+            ],
+            "row_count": 750,
+            "sample_rows": [
+              [
+                "1",
+                "3-D Man",
+                "Charles Chandler",
+                "1",
+                "9",
+                "13",
+                "1",
+                "1",
+                "13",
+                "1",
+                "188",
+                "90"
+              ]
+            ]
+          },
+          {
+            "path": "json/gender.json",
+            "context_folder": "json",
+            "data_format": "json",
+            "size_bytes": 196,
+            "fully_loaded": true,
+            "top_level_keys": [
+              "table",
+              "records"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "task_74",
+      "task_json": {
+        "difficulty": "easy",
+        "question": "Provide the eye colour of the superhero who has Karen Beecher-Duncan as their full name."
+      },
+      "context": {
+        "format_counts": {
+          "csv": 1,
+          "json": 1
+        },
+        "files": [
+          {
+            "path": "csv/superhero.csv",
+            "context_folder": "csv",
+            "data_format": "csv",
+            "size_bytes": 36279,
+            "column_count": 12,
+            "columns": [
+              "id",
+              "superhero_name",
+              "full_name",
+              "gender_id",
+              "eye_colour_id",
+              "hair_colour_id",
+              "skin_colour_id",
+              "race_id",
+              "publisher_id",
+              "alignment_id",
+              "height_cm",
+              "weight_kg"
+            ],
+            "row_count": 750,
+            "sample_rows": [
+              [
+                "1",
+                "3-D Man",
+                "Charles Chandler",
+                "1",
+                "9",
+                "13",
+                "1",
+                "1",
+                "13",
+                "1",
+                "188",
+                "90"
+              ]
+            ]
+          },
+          {
+            "path": "json/colour.json",
+            "context_folder": "json",
+            "data_format": "json",
+            "size_bytes": 1971,
+            "fully_loaded": true,
+            "top_level_keys": [
+              "table",
+              "records"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "task_75",
+      "task_json": {
+        "difficulty": "easy",
+        "question": "What is the surname of the driver with the best lap time in race number 19 in the second qualifying period?"
+      },
+      "context": {
+        "format_counts": {
+          "csv": 1,
+          "json": 1
+        },
+        "files": [
+          {
+            "path": "csv/qualifying.csv",
+            "context_folder": "csv",
+            "data_format": "csv",
+            "size_bytes": 277359,
+            "column_count": 9,
+            "columns": [
+              "qualifyId",
+              "raceId",
+              "driverId",
+              "constructorId",
+              "number",
+              "position",
+              "q1",
+              "q2",
+              "q3"
+            ],
+            "row_count": 7397,
+            "sample_rows": [
+              [
+                "1",
+                "18",
+                "1",
+                "1",
+                "22",
+                "1",
+                "1:26.572",
+                "1:25.187",
+                "1:26.714"
+              ]
+            ]
+          },
+          {
+            "path": "json/drivers.json",
+            "context_folder": "json",
+            "data_format": "json",
+            "size_bytes": 237752,
+            "fully_loaded": true,
+            "top_level_keys": [
+              "table",
+              "records"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "task_80",
+      "task_json": {
+        "difficulty": "easy",
+        "question": "What is his number of the driver who finished 0:01:54 in the Q3 of qualifying race No.903?"
+      },
+      "context": {
+        "format_counts": {
+          "csv": 1,
+          "json": 1
+        },
+        "files": [
+          {
+            "path": "csv/qualifying.csv",
+            "context_folder": "csv",
+            "data_format": "csv",
+            "size_bytes": 277359,
+            "column_count": 9,
+            "columns": [
+              "qualifyId",
+              "raceId",
+              "driverId",
+              "constructorId",
+              "number",
+              "position",
+              "q1",
+              "q2",
+              "q3"
+            ],
+            "row_count": 7397,
+            "sample_rows": [
+              [
+                "1",
+                "18",
+                "1",
+                "1",
+                "22",
+                "1",
+                "1:26.572",
+                "1:25.187",
+                "1:26.714"
+              ]
+            ]
+          },
+          {
+            "path": "json/drivers.json",
+            "context_folder": "json",
+            "data_format": "json",
+            "size_bytes": 237752,
+            "fully_loaded": true,
+            "top_level_keys": [
+              "table",
+              "records"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "task_86",
+      "task_json": {
+        "difficulty": "easy",
+        "question": "Which race was Alex Yoong in when he was in track number less than 20?"
+      },
+      "context": {
+        "format_counts": {
+          "csv": 2,
+          "json": 1
+        },
+        "files": [
+          {
+            "path": "csv/driverStandings.csv",
+            "context_folder": "csv",
+            "data_format": "csv",
+            "size_bytes": 827136,
+            "column_count": 7,
+            "columns": [
+              "driverStandingsId",
+              "raceId",
+              "driverId",
+              "points",
+              "position",
+              "positionText",
+              "wins"
+            ],
+            "row_count": 31578,
+            "sample_rows": [
+              [
+                "1",
+                "18",
+                "1",
+                "10.0",
+                "1",
+                "1",
+                "1"
+              ]
+            ]
+          },
+          {
+            "path": "csv/races.csv",
+            "context_folder": "csv",
+            "data_format": "csv",
+            "size_bytes": 100343,
+            "column_count": 8,
+            "columns": [
+              "raceId",
+              "year",
+              "round",
+              "circuitId",
+              "name",
+              "date",
+              "time",
+              "url"
+            ],
+            "row_count": 976,
+            "sample_rows": [
+              [
+                "1",
+                "2009",
+                "1",
+                "1",
+                "Australian Grand Prix",
+                "2009-03-29",
+                "06:00:00",
+                "http://en.wikipedia.org/wiki/2009_Australian_Grand_Prix"
+              ]
+            ]
+          },
+          {
+            "path": "json/drivers.json",
+            "context_folder": "json",
+            "data_format": "json",
+            "size_bytes": 237752,
+            "fully_loaded": true,
+            "top_level_keys": [
+              "table",
+              "records"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "task_89",
+      "task_json": {
+        "difficulty": "easy",
+        "question": "What's the finish time for the driver who ranked second in 2008's Chinese Grand Prix?"
+      },
+      "context": {
+        "format_counts": {
+          "csv": 1,
+          "json": 1
+        },
+        "files": [
+          {
+            "path": "csv/results.csv",
+            "context_folder": "csv",
+            "data_format": "csv",
+            "size_bytes": 1229092,
+            "column_count": 18,
+            "columns": [
+              "resultId",
+              "raceId",
+              "driverId",
+              "constructorId",
+              "number",
+              "grid",
+              "position",
+              "positionText",
+              "positionOrder",
+              "points",
+              "laps",
+              "time",
+              "milliseconds",
+              "fastestLap",
+              "rank",
+              "fastestLapTime",
+              "fastestLapSpeed",
+              "statusId"
+            ],
+            "row_count": 23657,
+            "sample_rows": [
+              [
+                "1",
+                "18",
+                "1",
+                "1",
+                "22",
+                "1",
+                "1",
+                "1",
+                "1",
+                "10.0",
+                "58",
+                "1:34:50.616",
+                "5690616",
+                "39",
+                "2",
+                "1:27.452",
+                "218.300",
+                "1"
+              ]
+            ]
+          },
+          {
+            "path": "json/races.json",
+            "context_folder": "json",
+            "data_format": "json",
+            "size_bytes": 244294,
+            "fully_loaded": true,
+            "top_level_keys": [
+              "table",
+              "records"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "task_145",
+      "task_json": {
+        "difficulty": "medium",
+        "question": "Among the events attended by more than 10 members of the Student_Club, how many of them are meetings?"
+      },
+      "context": {
+        "format_counts": {
+          "csv": 1,
+          "db": 1
+        },
+        "files": [
+          {
+            "path": "csv/attendance.csv",
+            "context_folder": "csv",
+            "data_format": "csv",
+            "size_bytes": 12092,
+            "column_count": 2,
+            "columns": [
+              "link_to_event",
+              "link_to_member"
+            ],
+            "row_count": 326,
+            "sample_rows": [
+              [
+                "rec2N69DMcrqN9PJC",
+                "recD078PnS3x2doBe"
+              ]
+            ]
+          },
+          {
+            "path": "db/event.db",
+            "context_folder": "db",
+            "data_format": "sqlite",
+            "size_bytes": 20480,
+            "table_count": 1,
+            "tables": [
+              {
+                "name": "event",
+                "column_count": 7,
+                "columns": [
+                  {
+                    "name": "event_id",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": true
+                  },
+                  {
+                    "name": "event_name",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "event_date",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "type",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "notes",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "location",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "status",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  }
+                ],
+                "row_count": 42,
+                "create_sql": "CREATE TABLE event\n(\n    event_id   TEXT\n        constraint event_pk\n            primary key,\n    event_name TEXT,\n    event_date TEXT,\n    type       TEXT,\n    notes      TEXT,\n    location   TEXT,\n    status     TEXT\n)"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "task_163",
+      "task_json": {
+        "difficulty": "medium",
+        "question": "Identify the type of expenses and their total value approved for 'October Meeting' event."
+      },
+      "context": {
+        "format_counts": {
+          "csv": 1,
+          "db": 1,
+          "json": 1
+        },
+        "files": [
+          {
+            "path": "csv/expense.csv",
+            "context_folder": "csv",
+            "data_format": "csv",
+            "size_bytes": 2980,
+            "column_count": 7,
+            "columns": [
+              "expense_id",
+              "expense_description",
+              "expense_date",
+              "cost",
+              "approved",
+              "link_to_member",
+              "link_to_budget"
+            ],
+            "row_count": 32,
+            "sample_rows": [
+              [
+                "rec017x6R3hQqkLAo",
+                "Post Cards, Posters",
+                "2019-08-20",
+                "122.06",
+                "true",
+                "rec4BLdZHS2Blfp4v",
+                "recvKTAWAFKkVNnXQ"
+              ]
+            ]
+          },
+          {
+            "path": "db/event.db",
+            "context_folder": "db",
+            "data_format": "sqlite",
+            "size_bytes": 20480,
+            "table_count": 1,
+            "tables": [
+              {
+                "name": "event",
+                "column_count": 7,
+                "columns": [
+                  {
+                    "name": "event_id",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": true
+                  },
+                  {
+                    "name": "event_name",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "event_date",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "type",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "notes",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "location",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "status",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  }
+                ],
+                "row_count": 42,
+                "create_sql": "CREATE TABLE event\n(\n    event_id   TEXT\n        constraint event_pk\n            primary key,\n    event_name TEXT,\n    event_date TEXT,\n    type       TEXT,\n    notes      TEXT,\n    location   TEXT,\n    status     TEXT\n)"
+              }
+            ]
+          },
+          {
+            "path": "json/budget.json",
+            "context_folder": "json",
+            "data_format": "json",
+            "size_bytes": 11786,
+            "fully_loaded": true,
+            "top_level_keys": [
+              "table",
+              "records"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "task_169",
+      "task_json": {
+        "difficulty": "medium",
+        "question": "What was the average monthly consumption of customers in SME for the year 2013?"
+      },
+      "context": {
+        "format_counts": {
+          "csv": 1,
+          "db": 1
+        },
+        "files": [
+          {
+            "path": "csv/yearmonth.csv",
+            "context_folder": "csv",
+            "data_format": "csv",
+            "size_bytes": 8210334,
+            "column_count": 3,
+            "columns": [
+              "CustomerID",
+              "Date",
+              "Consumption"
+            ],
+            "row_count": 383282,
+            "sample_rows": [
+              [
+                "5",
+                "201207",
+                "528.3"
+              ]
+            ]
+          },
+          {
+            "path": "db/customers.db",
+            "context_folder": "db",
+            "data_format": "sqlite",
+            "size_bytes": 929792,
+            "table_count": 1,
+            "tables": [
+              {
+                "name": "customers",
+                "column_count": 3,
+                "columns": [
+                  {
+                    "name": "CustomerID",
+                    "type": "INTEGER",
+                    "not_null": true,
+                    "default": null,
+                    "primary_key": true
+                  },
+                  {
+                    "name": "Segment",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "Currency",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  }
+                ],
+                "row_count": 32461,
+                "create_sql": "CREATE TABLE customers\n(\n    CustomerID INTEGER UNIQUE     not null\n        primary key,\n    Segment    TEXT null,\n    Currency   TEXT null\n)"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "task_173",
+      "task_json": {
+        "difficulty": "medium",
+        "question": "Please list the countries of the gas stations with transactions taken place in June, 2013."
+      },
+      "context": {
+        "format_counts": {
+          "csv": 1,
+          "db": 1,
+          "json": 1
+        },
+        "files": [
+          {
+            "path": "csv/yearmonth.csv",
+            "context_folder": "csv",
+            "data_format": "csv",
+            "size_bytes": 8210334,
+            "column_count": 3,
+            "columns": [
+              "CustomerID",
+              "Date",
+              "Consumption"
+            ],
+            "row_count": 383282,
+            "sample_rows": [
+              [
+                "5",
+                "201207",
+                "528.3"
+              ]
+            ]
+          },
+          {
+            "path": "db/transactions_1k.db",
+            "context_folder": "db",
+            "data_format": "sqlite",
+            "size_bytes": 65536,
+            "table_count": 1,
+            "tables": [
+              {
+                "name": "transactions_1k",
+                "column_count": 9,
+                "columns": [
+                  {
+                    "name": "TransactionID",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": true
+                  },
+                  {
+                    "name": "Date",
+                    "type": "DATE",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "Time",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "CustomerID",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "CardID",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "GasStationID",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "ProductID",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "Amount",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "Price",
+                    "type": "REAL",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  }
+                ],
+                "row_count": 1000,
+                "create_sql": "CREATE TABLE \"transactions_1k\"\n(\n    TransactionID INTEGER\n        primary key autoincrement,\n    Date          DATE,\n    Time          TEXT,\n    CustomerID    INTEGER,\n    CardID        INTEGER,\n    GasStationID  INTEGER,\n    ProductID     INTEGER,\n    Amount        INTEGER,\n    Price         REAL\n)"
+              }
+            ]
+          },
+          {
+            "path": "json/gasstations.json",
+            "context_folder": "json",
+            "data_format": "json",
+            "size_bytes": 641302,
+            "fully_loaded": true,
+            "top_level_keys": [
+              "table",
+              "records"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "task_180",
+      "task_json": {
+        "difficulty": "medium",
+        "question": "For all the people who paid more than 29.00 per unit of product id No.5. Give their consumption status in the August of 2012."
+      },
+      "context": {
+        "format_counts": {
+          "csv": 1,
+          "db": 1
+        },
+        "files": [
+          {
+            "path": "csv/yearmonth.csv",
+            "context_folder": "csv",
+            "data_format": "csv",
+            "size_bytes": 8210334,
+            "column_count": 3,
+            "columns": [
+              "CustomerID",
+              "Date",
+              "Consumption"
+            ],
+            "row_count": 383282,
+            "sample_rows": [
+              [
+                "5",
+                "201207",
+                "528.3"
+              ]
+            ]
+          },
+          {
+            "path": "db/transactions_1k.db",
+            "context_folder": "db",
+            "data_format": "sqlite",
+            "size_bytes": 65536,
+            "table_count": 1,
+            "tables": [
+              {
+                "name": "transactions_1k",
+                "column_count": 9,
+                "columns": [
+                  {
+                    "name": "TransactionID",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": true
+                  },
+                  {
+                    "name": "Date",
+                    "type": "DATE",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "Time",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "CustomerID",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "CardID",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "GasStationID",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "ProductID",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "Amount",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "Price",
+                    "type": "REAL",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  }
+                ],
+                "row_count": 1000,
+                "create_sql": "CREATE TABLE \"transactions_1k\"\n(\n    TransactionID INTEGER\n        primary key autoincrement,\n    Date          DATE,\n    Time          TEXT,\n    CustomerID    INTEGER,\n    CardID        INTEGER,\n    GasStationID  INTEGER,\n    ProductID     INTEGER,\n    Amount        INTEGER,\n    Price         REAL\n)"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "task_194",
+      "task_json": {
+        "difficulty": "medium",
+        "question": "What are the bonds that have phosphorus and nitrogen as their atom elements?"
+      },
+      "context": {
+        "format_counts": {
+          "csv": 1,
+          "db": 1
+        },
+        "files": [
+          {
+            "path": "csv/connected.csv",
+            "context_folder": "csv",
+            "data_format": "csv",
+            "size_bytes": 725208,
+            "column_count": 3,
+            "columns": [
+              "atom_id",
+              "atom_id2",
+              "bond_id"
+            ],
+            "row_count": 24758,
+            "sample_rows": [
+              [
+                "TR000_1",
+                "TR000_2",
+                "TR000_1_2"
+              ]
+            ]
+          },
+          {
+            "path": "db/atom.db",
+            "context_folder": "db",
+            "data_format": "sqlite",
+            "size_bytes": 1384448,
+            "table_count": 2,
+            "tables": [
+              {
+                "name": "atom",
+                "column_count": 3,
+                "columns": [
+                  {
+                    "name": "atom_id",
+                    "type": "TEXT",
+                    "not_null": true,
+                    "default": null,
+                    "primary_key": true
+                  },
+                  {
+                    "name": "molecule_id",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": "NULL",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "element",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": "NULL",
+                    "primary_key": false
+                  }
+                ],
+                "row_count": 12333,
+                "create_sql": "CREATE TABLE `atom` (\n  `atom_id` TEXT NOT NULL,\n  `molecule_id` TEXT DEFAULT NULL,\n  `element` TEXT DEFAULT NULL,\n  PRIMARY KEY (`atom_id`),\n  FOREIGN KEY (`molecule_id`) REFERENCES `molecule` (`molecule_id`)\n)"
+              },
+              {
+                "name": "connected",
+                "column_count": 3,
+                "columns": [
+                  {
+                    "name": "atom_id",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "atom_id2",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "bond_id",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  }
+                ],
+                "row_count": 24758,
+                "create_sql": "CREATE TABLE \"connected\" (\n\"atom_id\" TEXT,\n  \"atom_id2\" TEXT,\n  \"bond_id\" TEXT\n)"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "task_196",
+      "task_json": {
+        "difficulty": "medium",
+        "question": "What is the average number of bonds the atoms with the element iodine have?"
+      },
+      "context": {
+        "format_counts": {
+          "csv": 1,
+          "db": 1
+        },
+        "files": [
+          {
+            "path": "csv/connected.csv",
+            "context_folder": "csv",
+            "data_format": "csv",
+            "size_bytes": 725208,
+            "column_count": 3,
+            "columns": [
+              "atom_id",
+              "atom_id2",
+              "bond_id"
+            ],
+            "row_count": 24758,
+            "sample_rows": [
+              [
+                "TR000_1",
+                "TR000_2",
+                "TR000_1_2"
+              ]
+            ]
+          },
+          {
+            "path": "db/atom.db",
+            "context_folder": "db",
+            "data_format": "sqlite",
+            "size_bytes": 516096,
+            "table_count": 1,
+            "tables": [
+              {
+                "name": "atom",
+                "column_count": 3,
+                "columns": [
+                  {
+                    "name": "atom_id",
+                    "type": "TEXT",
+                    "not_null": true,
+                    "default": null,
+                    "primary_key": true
+                  },
+                  {
+                    "name": "molecule_id",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": "NULL",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "element",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": "NULL",
+                    "primary_key": false
+                  }
+                ],
+                "row_count": 12333,
+                "create_sql": "CREATE TABLE `atom` (\n  `atom_id` TEXT NOT NULL,\n  `molecule_id` TEXT DEFAULT NULL,\n  `element` TEXT DEFAULT NULL,\n  PRIMARY KEY (`atom_id`),\n  FOREIGN KEY (`molecule_id`) REFERENCES `molecule` (`molecule_id`)\n)"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "task_199",
+      "task_json": {
+        "difficulty": "medium",
+        "question": "List the names and funding types of schools from Riverside-related school districts where the average SAT math score across schools exceeds 400."
+      },
+      "context": {
+        "format_counts": {
+          "csv": 1,
+          "db": 1
+        },
+        "files": [
+          {
+            "path": "csv/frpm.csv",
+            "context_folder": "csv",
+            "data_format": "csv",
+            "size_bytes": 2836512,
+            "column_count": 29,
+            "columns": [
+              "CDSCode",
+              "Academic Year",
+              "County Code",
+              "District Code",
+              "School Code",
+              "County Name",
+              "District Name",
+              "School Name",
+              "District Type",
+              "School Type",
+              "Educational Option Type",
+              "NSLP Provision Status",
+              "Charter School (Y/N)",
+              "Charter School Number",
+              "Charter Funding Type",
+              "IRC",
+              "Low Grade",
+              "High Grade",
+              "Enrollment (K-12)",
+              "Free Meal Count (K-12)",
+              "Percent (%) Eligible Free (K-12)",
+              "FRPM Count (K-12)",
+              "Percent (%) Eligible FRPM (K-12)",
+              "Enrollment (Ages 5-17)",
+              "Free Meal Count (Ages 5-17)",
+              "Percent (%) Eligible Free (Ages 5-17)",
+              "FRPM Count (Ages 5-17)",
+              "Percent (%) Eligible FRPM (Ages 5-17)",
+              "2013-14 CALPADS Fall 1 Certification Status"
+            ],
+            "row_count": 9986,
+            "sample_rows": [
+              [
+                "01100170109835",
+                "2014-2015",
+                "01",
+                "10017",
+                "0109835",
+                "Alameda",
+                "Alameda County Office of Education",
+                "FAME Public Charter",
+                "County Office of Education (COE)",
+                "K-12 Schools (Public)",
+                "Traditional",
+                "",
+                "1",
+                "0728",
+                "Directly funded",
+                "1",
+                "K",
+                "12",
+                "1087.0",
+                "565.0",
+                "0.519779208831647",
+                "715.0",
+                "0.657773689052438",
+                "1070.0",
+                "553.0",
+                "0.516822429906542",
+                "702.0",
+                "0.65607476635514",
+                "1"
+              ]
+            ]
+          },
+          {
+            "path": "db/satscores.db",
+            "context_folder": "db",
+            "data_format": "sqlite",
+            "size_bytes": 266240,
+            "table_count": 1,
+            "tables": [
+              {
+                "name": "satscores",
+                "column_count": 11,
+                "columns": [
+                  {
+                    "name": "cds",
+                    "type": "TEXT",
+                    "not_null": true,
+                    "default": null,
+                    "primary_key": true
+                  },
+                  {
+                    "name": "rtype",
+                    "type": "TEXT",
+                    "not_null": true,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "sname",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "dname",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "cname",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "enroll12",
+                    "type": "INTEGER",
+                    "not_null": true,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "NumTstTakr",
+                    "type": "INTEGER",
+                    "not_null": true,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "AvgScrRead",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "AvgScrMath",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "AvgScrWrite",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "NumGE1500",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  }
+                ],
+                "row_count": 2269,
+                "create_sql": "CREATE TABLE satscores\n(\n    cds         TEXT not null\n        primary key,\n    rtype       TEXT  not null,\n    sname       TEXT null,\n    dname       TEXT null,\n    cname       TEXT null,\n    enroll12    INTEGER         not null,\n    NumTstTakr  INTEGER          not null,\n    AvgScrRead  INTEGER          null,\n    AvgScrMath  INTEGER          null,\n    AvgScrWrite INTEGER          null,\n    NumGE1500   INTEGER          null,\n--     PctGE1500   double      null,\n        foreign key (cds) references schools (CDSCode)\n)"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "task_200",
+      "task_json": {
+        "difficulty": "medium",
+        "question": "Calculate the total atoms with triple-bond molecules containing the element phosphorus or bromine."
+      },
+      "context": {
+        "format_counts": {
+          "csv": 1,
+          "db": 1,
+          "json": 1
+        },
+        "files": [
+          {
+            "path": "csv/atom.csv",
+            "context_folder": "csv",
+            "data_format": "csv",
+            "size_bytes": 218746,
+            "column_count": 3,
+            "columns": [
+              "atom_id",
+              "molecule_id",
+              "element"
+            ],
+            "row_count": 12333,
+            "sample_rows": [
+              [
+                "TR000_1",
+                "TR000",
+                "cl"
+              ]
+            ]
+          },
+          {
+            "path": "db/bond.db",
+            "context_folder": "db",
+            "data_format": "sqlite",
+            "size_bytes": 581632,
+            "table_count": 1,
+            "tables": [
+              {
+                "name": "bond",
+                "column_count": 3,
+                "columns": [
+                  {
+                    "name": "bond_id",
+                    "type": "TEXT",
+                    "not_null": true,
+                    "default": null,
+                    "primary_key": true
+                  },
+                  {
+                    "name": "molecule_id",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": "NULL",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "bond_type",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": "NULL",
+                    "primary_key": false
+                  }
+                ],
+                "row_count": 12379,
+                "create_sql": "CREATE TABLE `bond` (\n  `bond_id` TEXT NOT NULL,\n  `molecule_id` TEXT DEFAULT NULL,\n  `bond_type` TEXT DEFAULT NULL,\n  PRIMARY KEY (`bond_id`),\n  FOREIGN KEY (`molecule_id`) REFERENCES `molecule` (`molecule_id`)\n)"
+              }
+            ]
+          },
+          {
+            "path": "json/molecule.json",
+            "context_folder": "json",
+            "data_format": "json",
+            "size_bytes": 21310,
+            "fully_loaded": true,
+            "top_level_keys": [
+              "table",
+              "records"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "task_214",
+      "task_json": {
+        "difficulty": "medium",
+        "question": "How many Brazilian Portuguese translated sets are inside the Commander block?"
+      },
+      "context": {
+        "format_counts": {
+          "csv": 1,
+          "db": 1
+        },
+        "files": [
+          {
+            "path": "csv/set_translations.csv",
+            "context_folder": "csv",
+            "data_format": "csv",
+            "size_bytes": 43847,
+            "column_count": 4,
+            "columns": [
+              "id",
+              "language",
+              "setCode",
+              "translation"
+            ],
+            "row_count": 1210,
+            "sample_rows": [
+              [
+                "1",
+                "Chinese Simplified",
+                "10E",
+                "核心系列第十版"
+              ]
+            ]
+          },
+          {
+            "path": "db/sets.db",
+            "context_folder": "db",
+            "data_format": "sqlite",
+            "size_bytes": 110592,
+            "table_count": 1,
+            "tables": [
+              {
+                "name": "sets",
+                "column_count": 21,
+                "columns": [
+                  {
+                    "name": "id",
+                    "type": "INTEGER",
+                    "not_null": true,
+                    "default": null,
+                    "primary_key": true
+                  },
+                  {
+                    "name": "baseSetSize",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "block",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "booster",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "code",
+                    "type": "TEXT",
+                    "not_null": true,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "isFoilOnly",
+                    "type": "INTEGER",
+                    "not_null": true,
+                    "default": "0",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "isForeignOnly",
+                    "type": "INTEGER",
+                    "not_null": true,
+                    "default": "0",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "isNonFoilOnly",
+                    "type": "INTEGER",
+                    "not_null": true,
+                    "default": "0",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "isOnlineOnly",
+                    "type": "INTEGER",
+                    "not_null": true,
+                    "default": "0",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "isPartialPreview",
+                    "type": "INTEGER",
+                    "not_null": true,
+                    "default": "0",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "keyruneCode",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "mcmId",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "mcmIdExtras",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "mcmName",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "mtgoCode",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "name",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "parentCode",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "releaseDate",
+                    "type": "DATE",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "tcgplayerGroupId",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "totalSetSize",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "type",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  }
+                ],
+                "row_count": 551,
+                "create_sql": "CREATE TABLE \"sets\"\n(\n    id               INTEGER           not null\n        primary key autoincrement,\n    baseSetSize      INTEGER,\n    block            TEXT,\n    booster          TEXT,\n    code             TEXT              not null\n        unique,\n    isFoilOnly       INTEGER default 0 not null,\n    isForeignOnly    INTEGER default 0 not null,\n    isNonFoilOnly    INTEGER default 0 not null,\n    isOnlineOnly     INTEGER default 0 not null,\n    isPartialPreview INTEGER default 0 not null,\n    keyruneCode      TEXT,\n    mcmId            INTEGER,\n    mcmIdExtras      INTEGER,\n    mcmName          TEXT,\n    mtgoCode         TEXT,\n    name             TEXT,\n    parentCode       TEXT,\n    releaseDate      DATE,\n    tcgplayerGroupId INTEGER,\n    totalSetSize     INTEGER,\n    type             TEXT\n)"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "task_218",
+      "task_json": {
+        "difficulty": "medium",
+        "question": "What is the telephone number for the school with the lowest average score in reading in Fresno Unified?"
+      },
+      "context": {
+        "format_counts": {
+          "db": 1,
+          "json": 1
+        },
+        "files": [
+          {
+            "path": "db/satscores.db",
+            "context_folder": "db",
+            "data_format": "sqlite",
+            "size_bytes": 266240,
+            "table_count": 1,
+            "tables": [
+              {
+                "name": "satscores",
+                "column_count": 11,
+                "columns": [
+                  {
+                    "name": "cds",
+                    "type": "TEXT",
+                    "not_null": true,
+                    "default": null,
+                    "primary_key": true
+                  },
+                  {
+                    "name": "rtype",
+                    "type": "TEXT",
+                    "not_null": true,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "sname",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "dname",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "cname",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "enroll12",
+                    "type": "INTEGER",
+                    "not_null": true,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "NumTstTakr",
+                    "type": "INTEGER",
+                    "not_null": true,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "AvgScrRead",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "AvgScrMath",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "AvgScrWrite",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "NumGE1500",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  }
+                ],
+                "row_count": 2269,
+                "create_sql": "CREATE TABLE satscores\n(\n    cds         TEXT not null\n        primary key,\n    rtype       TEXT  not null,\n    sname       TEXT null,\n    dname       TEXT null,\n    cname       TEXT null,\n    enroll12    INTEGER         not null,\n    NumTstTakr  INTEGER          not null,\n    AvgScrRead  INTEGER          null,\n    AvgScrMath  INTEGER          null,\n    AvgScrWrite INTEGER          null,\n    NumGE1500   INTEGER          null,\n--     PctGE1500   double      null,\n        foreign key (cds) references schools (CDSCode)\n)"
+              }
+            ]
+          },
+          {
+            "path": "json/schools.json",
+            "context_folder": "json",
+            "data_format": "json",
+            "size_bytes": 25773221,
+            "fully_loaded": false,
+            "reason": "larger than 10485760 bytes",
+            "preview": "{\n  \"table\": \"schools\",\n  \"records\": [\n    {\n      \"CDSCode\": \"01100170000000\",\n      \"NCESDist\": \"0691051\",\n      \"NCESSchool\": null,\n      \"StatusType\": \"Active\",\n      \"County\": \"Alameda\",\n      \"District\": \"Alameda County Office of Education\",\n      \"School\": null,\n      \"Street\": \"313 West Wint"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "task_243",
+      "task_json": {
+        "difficulty": "medium",
+        "question": "For the user No.24, how many times is the number of his/her posts compared to his/her votes?"
+      },
+      "context": {
+        "format_counts": {
+          "csv": 1,
+          "db": 1
+        },
+        "files": [
+          {
+            "path": "csv/votes.csv",
+            "context_folder": "csv",
+            "data_format": "csv",
+            "size_bytes": 1046538,
+            "column_count": 6,
+            "columns": [
+              "Id",
+              "PostId",
+              "VoteTypeId",
+              "CreationDate",
+              "UserId",
+              "BountyAmount"
+            ],
+            "row_count": 38930,
+            "sample_rows": [
+              [
+                "1",
+                "3",
+                "2",
+                "2010-07-19",
+                "",
+                ""
+              ]
+            ]
+          },
+          {
+            "path": "db/posts.db",
+            "context_folder": "db",
+            "data_format": "sqlite",
+            "size_bytes": 142729216,
+            "table_count": 1,
+            "tables": [
+              {
+                "name": "posts",
+                "column_count": 21,
+                "columns": [
+                  {
+                    "name": "Id",
+                    "type": "INTEGER",
+                    "not_null": true,
+                    "default": null,
+                    "primary_key": true
+                  },
+                  {
+                    "name": "PostTypeId",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "AcceptedAnswerId",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "CreaionDate",
+                    "type": "DATETIME",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "Score",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "ViewCount",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "Body",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "OwnerUserId",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "LasActivityDate",
+                    "type": "DATETIME",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "Title",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "Tags",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "AnswerCount",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "CommentCount",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "FavoriteCount",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "LastEditorUserId",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "LastEditDate",
+                    "type": "DATETIME",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "CommunityOwnedDate",
+                    "type": "DATETIME",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "ParentId",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "ClosedDate",
+                    "type": "DATETIME",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "OwnerDisplayName",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "LastEditorDisplayName",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  }
+                ],
+                "row_count": 91966,
+                "create_sql": "CREATE TABLE posts\n(\n    Id                    INTEGER          not null UNIQUE\n        primary key,\n    PostTypeId            INTEGER          null,\n    AcceptedAnswerId      INTEGER          null,\n    CreaionDate           DATETIME     null,\n    Score                 INTEGER          null,\n    ViewCount             INTEGER          null,\n    Body                  TEXT     null,\n    OwnerUserId           INTEGER          null,\n    LasActivityDate       DATETIME     null,\n    Title                 TEXT null,\n    Tags                  TEXT null,\n    AnswerCount           INTEGER          null,\n    CommentCount          INTEGER          null,\n    FavoriteCount         INTEGER          null,\n    LastEditorUserId      INTEGER          null,\n    LastEditDate          DATETIME     null,\n    CommunityOwnedDate    DATETIME    null,\n    ParentId              INTEGER          null,\n    ClosedDate            DATETIME     null,\n    OwnerDisplayName      TEXT null,\n    LastEditorDisplayName TEXT null,\n        foreign key (LastEditorUserId) references users (Id)\n            on update cascade on delete cascade,\n        foreign key (OwnerUserId) references users (Id)\n            on update cascade on delete cascade,\n        foreign key (ParentId) references posts (Id)\n            on update cascade on delete cascade\n)"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "task_249",
+      "task_json": {
+        "difficulty": "medium",
+        "question": "What is the average of the up votes and the average user age for users creating more than 10 posts?"
+      },
+      "context": {
+        "format_counts": {
+          "db": 1,
+          "json": 1
+        },
+        "files": [
+          {
+            "path": "db/users.db",
+            "context_folder": "db",
+            "data_format": "sqlite",
+            "size_bytes": 7622656,
+            "table_count": 1,
+            "tables": [
+              {
+                "name": "users",
+                "column_count": 14,
+                "columns": [
+                  {
+                    "name": "Id",
+                    "type": "INTEGER",
+                    "not_null": true,
+                    "default": null,
+                    "primary_key": true
+                  },
+                  {
+                    "name": "Reputation",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "CreationDate",
+                    "type": "DATETIME",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "DisplayName",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "LastAccessDate",
+                    "type": "DATETIME",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "WebsiteUrl",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "Location",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "AboutMe",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "Views",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "UpVotes",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "DownVotes",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "AccountId",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "Age",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "ProfileImageUrl",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  }
+                ],
+                "row_count": 40325,
+                "create_sql": "CREATE TABLE users\n(\n    Id              INTEGER          not null UNIQUE\n        primary key,\n    Reputation      INTEGER          null,\n    CreationDate    DATETIME     null,\n    DisplayName     TEXT null,\n    LastAccessDate  DATETIME     null,\n    WebsiteUrl      TEXT null,\n    Location        TEXT null,\n    AboutMe         TEXT     null,\n    Views           INTEGER          null,\n    UpVotes         INTEGER          null,\n    DownVotes       INTEGER          null,\n    AccountId       INTEGER          null,\n    Age             INTEGER          null,\n    ProfileImageUrl TEXT null\n)"
+              }
+            ]
+          },
+          {
+            "path": "json/posts.json",
+            "context_folder": "json",
+            "data_format": "json",
+            "size_bytes": 166277775,
+            "fully_loaded": false,
+            "reason": "larger than 10485760 bytes",
+            "preview": "{\n  \"table\": \"posts\",\n  \"records\": [\n    {\n      \"Id\": 1,\n      \"PostTypeId\": 1,\n      \"AcceptedAnswerId\": 15,\n      \"CreaionDate\": \"2010-07-19 19:12:12.0\",\n      \"Score\": 23,\n      \"ViewCount\": 1278,\n      \"Body\": \"<p>How should I elicit prior distributions from experts when fitting a Bayesian mode"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "task_250",
+      "task_json": {
+        "difficulty": "medium",
+        "question": "Which post by slashnick has the most answers count? State the post ID."
+      },
+      "context": {
+        "format_counts": {
+          "csv": 1,
+          "db": 1,
+          "json": 1
+        },
+        "files": [
+          {
+            "path": "csv/postHistory.csv",
+            "context_folder": "csv",
+            "data_format": "csv",
+            "size_bytes": 228942242,
+            "column_count": 9,
+            "columns": [
+              "Id",
+              "PostHistoryTypeId",
+              "PostId",
+              "RevisionGUID",
+              "CreationDate",
+              "UserId",
+              "Text",
+              "Comment",
+              "UserDisplayName"
+            ],
+            "row_count": 303155,
+            "sample_rows": [
+              [
+                "1",
+                "2",
+                "1",
+                "e58bf7fd-e60f-4c58-a6e4-dfc91cf98a69",
+                "2010-07-19 19:12:12.0",
+                "8",
+                "How should I elicit prior distributions from experts when fitting a Bayesian model?",
+                "",
+                ""
+              ]
+            ]
+          },
+          {
+            "path": "db/users.db",
+            "context_folder": "db",
+            "data_format": "sqlite",
+            "size_bytes": 7622656,
+            "table_count": 1,
+            "tables": [
+              {
+                "name": "users",
+                "column_count": 14,
+                "columns": [
+                  {
+                    "name": "Id",
+                    "type": "INTEGER",
+                    "not_null": true,
+                    "default": null,
+                    "primary_key": true
+                  },
+                  {
+                    "name": "Reputation",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "CreationDate",
+                    "type": "DATETIME",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "DisplayName",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "LastAccessDate",
+                    "type": "DATETIME",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "WebsiteUrl",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "Location",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "AboutMe",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "Views",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "UpVotes",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "DownVotes",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "AccountId",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "Age",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "ProfileImageUrl",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  }
+                ],
+                "row_count": 40325,
+                "create_sql": "CREATE TABLE users\n(\n    Id              INTEGER          not null UNIQUE\n        primary key,\n    Reputation      INTEGER          null,\n    CreationDate    DATETIME     null,\n    DisplayName     TEXT null,\n    LastAccessDate  DATETIME     null,\n    WebsiteUrl      TEXT null,\n    Location        TEXT null,\n    AboutMe         TEXT     null,\n    Views           INTEGER          null,\n    UpVotes         INTEGER          null,\n    DownVotes       INTEGER          null,\n    AccountId       INTEGER          null,\n    Age             INTEGER          null,\n    ProfileImageUrl TEXT null\n)"
+              }
+            ]
+          },
+          {
+            "path": "json/posts.json",
+            "context_folder": "json",
+            "data_format": "json",
+            "size_bytes": 166277775,
+            "fully_loaded": false,
+            "reason": "larger than 10485760 bytes",
+            "preview": "{\n  \"table\": \"posts\",\n  \"records\": [\n    {\n      \"Id\": 1,\n      \"PostTypeId\": 1,\n      \"AcceptedAnswerId\": 15,\n      \"CreaionDate\": \"2010-07-19 19:12:12.0\",\n      \"Score\": 23,\n      \"ViewCount\": 1278,\n      \"Body\": \"<p>How should I elicit prior distributions from experts when fitting a Bayesian mode"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "task_257",
+      "task_json": {
+        "difficulty": "medium",
+        "question": "Identify the total views on the post 'Computer Game Datasets'. Name the user who posted it last time."
+      },
+      "context": {
+        "format_counts": {
+          "db": 1,
+          "json": 2
+        },
+        "files": [
+          {
+            "path": "db/postHistory.db",
+            "context_folder": "db",
+            "data_format": "sqlite",
+            "size_bytes": 276455424,
+            "table_count": 1,
+            "tables": [
+              {
+                "name": "postHistory",
+                "column_count": 9,
+                "columns": [
+                  {
+                    "name": "Id",
+                    "type": "INTEGER",
+                    "not_null": true,
+                    "default": null,
+                    "primary_key": true
+                  },
+                  {
+                    "name": "PostHistoryTypeId",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "PostId",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "RevisionGUID",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "CreationDate",
+                    "type": "DATETIME",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "UserId",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "Text",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "Comment",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "UserDisplayName",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  }
+                ],
+                "row_count": 303155,
+                "create_sql": "CREATE TABLE postHistory\n(\n    Id                INTEGER          not null UNIQUE\n        primary key,\n    PostHistoryTypeId INTEGER          null,\n    PostId            INTEGER          null,\n    RevisionGUID      TEXT null,\n    CreationDate      DATETIME     null,\n    UserId            INTEGER          null,\n    Text              TEXT     null,\n    Comment           TEXT         null,\n    UserDisplayName   TEXT null,\n        foreign key (PostId) references posts (Id)\n            on update cascade on delete cascade,\n        foreign key (UserId) references users (Id)\n            on update cascade on delete cascade\n)"
+              }
+            ]
+          },
+          {
+            "path": "json/posts.json",
+            "context_folder": "json",
+            "data_format": "json",
+            "size_bytes": 166277775,
+            "fully_loaded": false,
+            "reason": "larger than 10485760 bytes",
+            "preview": "{\n  \"table\": \"posts\",\n  \"records\": [\n    {\n      \"Id\": 1,\n      \"PostTypeId\": 1,\n      \"AcceptedAnswerId\": 15,\n      \"CreaionDate\": \"2010-07-19 19:12:12.0\",\n      \"Score\": 23,\n      \"ViewCount\": 1278,\n      \"Body\": \"<p>How should I elicit prior distributions from experts when fitting a Bayesian mode"
+          },
+          {
+            "path": "json/users.json",
+            "context_folder": "json",
+            "data_format": "json",
+            "size_bytes": 19518174,
+            "fully_loaded": false,
+            "reason": "larger than 10485760 bytes",
+            "preview": "{\n  \"table\": \"users\",\n  \"records\": [\n    {\n      \"Id\": -1,\n      \"Reputation\": 1,\n      \"CreationDate\": \"2010-07-19 06:55:26.0\",\n      \"DisplayName\": \"Community\",\n      \"LastAccessDate\": \"2010-07-19 06:55:26.0\",\n      \"WebsiteUrl\": \"http://meta.stackexchange.com/\",\n      \"Location\": \"on the server f"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "task_259",
+      "task_json": {
+        "difficulty": "medium",
+        "question": "Among the posts with views ranging from 100 to 150, what is the comment with the highest score?"
+      },
+      "context": {
+        "format_counts": {
+          "csv": 1,
+          "db": 1
+        },
+        "files": [
+          {
+            "path": "csv/comments.csv",
+            "context_folder": "csv",
+            "data_format": "csv",
+            "size_bytes": 48122214,
+            "column_count": 7,
+            "columns": [
+              "Id",
+              "PostId",
+              "Score",
+              "Text",
+              "CreationDate",
+              "UserId",
+              "UserDisplayName"
+            ],
+            "row_count": 174285,
+            "sample_rows": [
+              [
+                "1",
+                "3",
+                "5",
+                "Could be a poster child fo argumentative and subjective.  At the least, need to define 'valuable'.",
+                "2010-07-19 19:15:52.0",
+                "13",
+                ""
+              ]
+            ]
+          },
+          {
+            "path": "db/posts.db",
+            "context_folder": "db",
+            "data_format": "sqlite",
+            "size_bytes": 142729216,
+            "table_count": 1,
+            "tables": [
+              {
+                "name": "posts",
+                "column_count": 21,
+                "columns": [
+                  {
+                    "name": "Id",
+                    "type": "INTEGER",
+                    "not_null": true,
+                    "default": null,
+                    "primary_key": true
+                  },
+                  {
+                    "name": "PostTypeId",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "AcceptedAnswerId",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "CreaionDate",
+                    "type": "DATETIME",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "Score",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "ViewCount",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "Body",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "OwnerUserId",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "LasActivityDate",
+                    "type": "DATETIME",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "Title",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "Tags",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "AnswerCount",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "CommentCount",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "FavoriteCount",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "LastEditorUserId",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "LastEditDate",
+                    "type": "DATETIME",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "CommunityOwnedDate",
+                    "type": "DATETIME",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "ParentId",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "ClosedDate",
+                    "type": "DATETIME",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "OwnerDisplayName",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "LastEditorDisplayName",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  }
+                ],
+                "row_count": 91966,
+                "create_sql": "CREATE TABLE posts\n(\n    Id                    INTEGER          not null UNIQUE\n        primary key,\n    PostTypeId            INTEGER          null,\n    AcceptedAnswerId      INTEGER          null,\n    CreaionDate           DATETIME     null,\n    Score                 INTEGER          null,\n    ViewCount             INTEGER          null,\n    Body                  TEXT     null,\n    OwnerUserId           INTEGER          null,\n    LasActivityDate       DATETIME     null,\n    Title                 TEXT null,\n    Tags                  TEXT null,\n    AnswerCount           INTEGER          null,\n    CommentCount          INTEGER          null,\n    FavoriteCount         INTEGER          null,\n    LastEditorUserId      INTEGER          null,\n    LastEditDate          DATETIME     null,\n    CommunityOwnedDate    DATETIME    null,\n    ParentId              INTEGER          null,\n    ClosedDate            DATETIME     null,\n    OwnerDisplayName      TEXT null,\n    LastEditorDisplayName TEXT null,\n        foreign key (LastEditorUserId) references users (Id)\n            on update cascade on delete cascade,\n        foreign key (OwnerUserId) references users (Id)\n            on update cascade on delete cascade,\n        foreign key (ParentId) references posts (Id)\n            on update cascade on delete cascade\n)"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "task_261",
+      "task_json": {
+        "difficulty": "medium",
+        "question": "Among the superheroes with the super power of \"Super Strength\", how many of them have a height of over 200cm?"
+      },
+      "context": {
+        "format_counts": {
+          "csv": 1,
+          "db": 1,
+          "json": 1
+        },
+        "files": [
+          {
+            "path": "csv/superhero.csv",
+            "context_folder": "csv",
+            "data_format": "csv",
+            "size_bytes": 36279,
+            "column_count": 12,
+            "columns": [
+              "id",
+              "superhero_name",
+              "full_name",
+              "gender_id",
+              "eye_colour_id",
+              "hair_colour_id",
+              "skin_colour_id",
+              "race_id",
+              "publisher_id",
+              "alignment_id",
+              "height_cm",
+              "weight_kg"
+            ],
+            "row_count": 750,
+            "sample_rows": [
+              [
+                "1",
+                "3-D Man",
+                "Charles Chandler",
+                "1",
+                "9",
+                "13",
+                "1",
+                "1",
+                "13",
+                "1",
+                "188",
+                "90"
+              ]
+            ]
+          },
+          {
+            "path": "db/hero_power.db",
+            "context_folder": "db",
+            "data_format": "sqlite",
+            "size_bytes": 73728,
+            "table_count": 1,
+            "tables": [
+              {
+                "name": "hero_power",
+                "column_count": 2,
+                "columns": [
+                  {
+                    "name": "hero_id",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": "NULL",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "power_id",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": "NULL",
+                    "primary_key": false
+                  }
+                ],
+                "row_count": 5825,
+                "create_sql": "CREATE TABLE hero_power\n(\n    hero_id  INTEGER default NULL,\n    power_id INTEGER default NULL,\n    foreign key (hero_id) references superhero(id),\n    foreign key (power_id) references superpower(id)\n)"
+              }
+            ]
+          },
+          {
+            "path": "json/superpower.json",
+            "context_folder": "json",
+            "data_format": "json",
+            "size_bytes": 11068,
+            "fully_loaded": true,
+            "top_level_keys": [
+              "table",
+              "records"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "task_269",
+      "task_json": {
+        "difficulty": "medium",
+        "question": "What are the names of the superheroes with the power of death touch?"
+      },
+      "context": {
+        "format_counts": {
+          "csv": 1,
+          "db": 1,
+          "json": 1
+        },
+        "files": [
+          {
+            "path": "csv/hero_power.csv",
+            "context_folder": "csv",
+            "data_format": "csv",
+            "size_bytes": 45546,
+            "column_count": 2,
+            "columns": [
+              "hero_id",
+              "power_id"
+            ],
+            "row_count": 5825,
+            "sample_rows": [
+              [
+                "1",
+                "1"
+              ]
+            ]
+          },
+          {
+            "path": "db/superhero.db",
+            "context_folder": "db",
+            "data_format": "sqlite",
+            "size_bytes": 40960,
+            "table_count": 1,
+            "tables": [
+              {
+                "name": "superhero",
+                "column_count": 12,
+                "columns": [
+                  {
+                    "name": "id",
+                    "type": "INTEGER",
+                    "not_null": true,
+                    "default": null,
+                    "primary_key": true
+                  },
+                  {
+                    "name": "superhero_name",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": "NULL",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "full_name",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": "NULL",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "gender_id",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": "NULL",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "eye_colour_id",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": "NULL",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "hair_colour_id",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": "NULL",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "skin_colour_id",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": "NULL",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "race_id",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": "NULL",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "publisher_id",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": "NULL",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "alignment_id",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": "NULL",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "height_cm",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": "NULL",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "weight_kg",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": "NULL",
+                    "primary_key": false
+                  }
+                ],
+                "row_count": 750,
+                "create_sql": "CREATE TABLE superhero\n(\n    id             INTEGER not null\n            primary key,\n    superhero_name TEXT default NULL,\n    full_name      TEXT default NULL,\n    gender_id      INTEGER          default NULL,\n    eye_colour_id  INTEGER          default NULL,\n    hair_colour_id INTEGER          default NULL,\n    skin_colour_id INTEGER          default NULL,\n    race_id        INTEGER          default NULL,\n    publisher_id   INTEGER          default NULL,\n    alignment_id   INTEGER          default NULL,\n    height_cm      INTEGER          default NULL,\n    weight_kg      INTEGER          default NULL,\n    foreign key (alignment_id) references alignment(id),\n    foreign key (eye_colour_id) references colour(id),\n    foreign key (gender_id) references gender(id),\n    foreign key (hair_colour_id) references colour(id),\n    foreign key (publisher_id) references publisher(id),\n    foreign key (race_id) references race(id),\n    foreign key (skin_colour_id) references colour(id)\n)"
+              }
+            ]
+          },
+          {
+            "path": "json/superpower.json",
+            "context_folder": "json",
+            "data_format": "json",
+            "size_bytes": 11068,
+            "fully_loaded": true,
+            "top_level_keys": [
+              "table",
+              "records"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "task_283",
+      "task_json": {
+        "difficulty": "medium",
+        "question": "Calculate the percentage of superheroes with blue eyes."
+      },
+      "context": {
+        "format_counts": {
+          "db": 1,
+          "json": 1
+        },
+        "files": [
+          {
+            "path": "db/superhero.db",
+            "context_folder": "db",
+            "data_format": "sqlite",
+            "size_bytes": 40960,
+            "table_count": 1,
+            "tables": [
+              {
+                "name": "superhero",
+                "column_count": 12,
+                "columns": [
+                  {
+                    "name": "id",
+                    "type": "INTEGER",
+                    "not_null": true,
+                    "default": null,
+                    "primary_key": true
+                  },
+                  {
+                    "name": "superhero_name",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": "NULL",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "full_name",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": "NULL",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "gender_id",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": "NULL",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "eye_colour_id",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": "NULL",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "hair_colour_id",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": "NULL",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "skin_colour_id",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": "NULL",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "race_id",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": "NULL",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "publisher_id",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": "NULL",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "alignment_id",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": "NULL",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "height_cm",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": "NULL",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "weight_kg",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": "NULL",
+                    "primary_key": false
+                  }
+                ],
+                "row_count": 750,
+                "create_sql": "CREATE TABLE superhero\n(\n    id             INTEGER not null\n            primary key,\n    superhero_name TEXT default NULL,\n    full_name      TEXT default NULL,\n    gender_id      INTEGER          default NULL,\n    eye_colour_id  INTEGER          default NULL,\n    hair_colour_id INTEGER          default NULL,\n    skin_colour_id INTEGER          default NULL,\n    race_id        INTEGER          default NULL,\n    publisher_id   INTEGER          default NULL,\n    alignment_id   INTEGER          default NULL,\n    height_cm      INTEGER          default NULL,\n    weight_kg      INTEGER          default NULL,\n    foreign key (alignment_id) references alignment(id),\n    foreign key (eye_colour_id) references colour(id),\n    foreign key (gender_id) references gender(id),\n    foreign key (hair_colour_id) references colour(id),\n    foreign key (publisher_id) references publisher(id),\n    foreign key (race_id) references race(id),\n    foreign key (skin_colour_id) references colour(id)\n)"
+              }
+            ]
+          },
+          {
+            "path": "json/colour.json",
+            "context_folder": "json",
+            "data_format": "json",
+            "size_bytes": 1971,
+            "fully_loaded": true,
+            "top_level_keys": [
+              "table",
+              "records"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "task_287",
+      "task_json": {
+        "difficulty": "medium",
+        "question": "Identify the gender of the superhero who has the ability of Phoenix Force."
+      },
+      "context": {
+        "format_counts": {
+          "csv": 1,
+          "db": 1,
+          "json": 2
+        },
+        "files": [
+          {
+            "path": "csv/hero_power.csv",
+            "context_folder": "csv",
+            "data_format": "csv",
+            "size_bytes": 45546,
+            "column_count": 2,
+            "columns": [
+              "hero_id",
+              "power_id"
+            ],
+            "row_count": 5825,
+            "sample_rows": [
+              [
+                "1",
+                "1"
+              ]
+            ]
+          },
+          {
+            "path": "db/superhero.db",
+            "context_folder": "db",
+            "data_format": "sqlite",
+            "size_bytes": 40960,
+            "table_count": 1,
+            "tables": [
+              {
+                "name": "superhero",
+                "column_count": 12,
+                "columns": [
+                  {
+                    "name": "id",
+                    "type": "INTEGER",
+                    "not_null": true,
+                    "default": null,
+                    "primary_key": true
+                  },
+                  {
+                    "name": "superhero_name",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": "NULL",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "full_name",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": "NULL",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "gender_id",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": "NULL",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "eye_colour_id",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": "NULL",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "hair_colour_id",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": "NULL",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "skin_colour_id",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": "NULL",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "race_id",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": "NULL",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "publisher_id",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": "NULL",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "alignment_id",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": "NULL",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "height_cm",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": "NULL",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "weight_kg",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": "NULL",
+                    "primary_key": false
+                  }
+                ],
+                "row_count": 750,
+                "create_sql": "CREATE TABLE superhero\n(\n    id             INTEGER not null\n            primary key,\n    superhero_name TEXT default NULL,\n    full_name      TEXT default NULL,\n    gender_id      INTEGER          default NULL,\n    eye_colour_id  INTEGER          default NULL,\n    hair_colour_id INTEGER          default NULL,\n    skin_colour_id INTEGER          default NULL,\n    race_id        INTEGER          default NULL,\n    publisher_id   INTEGER          default NULL,\n    alignment_id   INTEGER          default NULL,\n    height_cm      INTEGER          default NULL,\n    weight_kg      INTEGER          default NULL,\n    foreign key (alignment_id) references alignment(id),\n    foreign key (eye_colour_id) references colour(id),\n    foreign key (gender_id) references gender(id),\n    foreign key (hair_colour_id) references colour(id),\n    foreign key (publisher_id) references publisher(id),\n    foreign key (race_id) references race(id),\n    foreign key (skin_colour_id) references colour(id)\n)"
+              }
+            ]
+          },
+          {
+            "path": "json/gender.json",
+            "context_folder": "json",
+            "data_format": "json",
+            "size_bytes": 196,
+            "fully_loaded": true,
+            "top_level_keys": [
+              "table",
+              "records"
+            ]
+          },
+          {
+            "path": "json/superpower.json",
+            "context_folder": "json",
+            "data_format": "json",
+            "size_bytes": 11068,
+            "fully_loaded": true,
+            "top_level_keys": [
+              "table",
+              "records"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "task_292",
+      "task_json": {
+        "difficulty": "medium",
+        "question": "For the constructor which got the highest point in the race No. 9 , what is its introduction website?"
+      },
+      "context": {
+        "format_counts": {
+          "db": 1,
+          "json": 1
+        },
+        "files": [
+          {
+            "path": "db/constructorResults.db",
+            "context_folder": "db",
+            "data_format": "sqlite",
+            "size_bytes": 172032,
+            "table_count": 1,
+            "tables": [
+              {
+                "name": "constructorResults",
+                "column_count": 5,
+                "columns": [
+                  {
+                    "name": "constructorResultsId",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": true
+                  },
+                  {
+                    "name": "raceId",
+                    "type": "INTEGER",
+                    "not_null": true,
+                    "default": "0",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "constructorId",
+                    "type": "INTEGER",
+                    "not_null": true,
+                    "default": "0",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "points",
+                    "type": "REAL",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "status",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  }
+                ],
+                "row_count": 11082,
+                "create_sql": "CREATE TABLE constructorResults\n(\n    constructorResultsId INTEGER\n        primary key autoincrement,\n    raceId               INTEGER default 0 not null,\n    constructorId        INTEGER default 0 not null,\n    points               REAL,\n    status               TEXT,\n    foreign key (raceId) references races(raceId),\n    foreign key (constructorId) references constructors(constructorId)\n\n)"
+              }
+            ]
+          },
+          {
+            "path": "json/constructors.json",
+            "context_folder": "json",
+            "data_format": "json",
+            "size_bytes": 40365,
+            "fully_loaded": true,
+            "top_level_keys": [
+              "table",
+              "records"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "task_303",
+      "task_json": {
+        "difficulty": "medium",
+        "question": "Among all European Grand Prix races, what is the percentage of the races were hosted in Germany?"
+      },
+      "context": {
+        "format_counts": {
+          "db": 1,
+          "json": 1
+        },
+        "files": [
+          {
+            "path": "db/races.db",
+            "context_folder": "db",
+            "data_format": "sqlite",
+            "size_bytes": 212992,
+            "table_count": 1,
+            "tables": [
+              {
+                "name": "races",
+                "column_count": 8,
+                "columns": [
+                  {
+                    "name": "raceId",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": true
+                  },
+                  {
+                    "name": "year",
+                    "type": "INTEGER",
+                    "not_null": true,
+                    "default": "0",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "round",
+                    "type": "INTEGER",
+                    "not_null": true,
+                    "default": "0",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "circuitId",
+                    "type": "INTEGER",
+                    "not_null": true,
+                    "default": "0",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "name",
+                    "type": "TEXT",
+                    "not_null": true,
+                    "default": "''",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "date",
+                    "type": "DATE",
+                    "not_null": true,
+                    "default": "'0000-00-00'",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "time",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "url",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  }
+                ],
+                "row_count": 976,
+                "create_sql": "CREATE TABLE races\n(\n    raceId    INTEGER\n        primary key autoincrement,\n    year      INTEGER default 0            not null,\n    round     INTEGER default 0            not null,\n    circuitId INTEGER default 0            not null,\n    name      TEXT    default ''           not null,\n    date      DATE    default '0000-00-00' not null,\n    time      TEXT,\n    url       TEXT unique,\n    foreign key (year) references seasons(year),\n    foreign key (circuitId) references circuits(circuitId)\n)"
+              }
+            ]
+          },
+          {
+            "path": "json/circuits.json",
+            "context_folder": "json",
+            "data_format": "json",
+            "size_bytes": 21033,
+            "fully_loaded": true,
+            "top_level_keys": [
+              "table",
+              "records"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "task_305",
+      "task_json": {
+        "difficulty": "medium",
+        "question": "What was the fastest lap speed among all drivers in the 2009 Spanish Grand Prix?"
+      },
+      "context": {
+        "format_counts": {
+          "csv": 1,
+          "db": 1
+        },
+        "files": [
+          {
+            "path": "csv/results.csv",
+            "context_folder": "csv",
+            "data_format": "csv",
+            "size_bytes": 1229092,
+            "column_count": 18,
+            "columns": [
+              "resultId",
+              "raceId",
+              "driverId",
+              "constructorId",
+              "number",
+              "grid",
+              "position",
+              "positionText",
+              "positionOrder",
+              "points",
+              "laps",
+              "time",
+              "milliseconds",
+              "fastestLap",
+              "rank",
+              "fastestLapTime",
+              "fastestLapSpeed",
+              "statusId"
+            ],
+            "row_count": 23657,
+            "sample_rows": [
+              [
+                "1",
+                "18",
+                "1",
+                "1",
+                "22",
+                "1",
+                "1",
+                "1",
+                "1",
+                "10.0",
+                "58",
+                "1:34:50.616",
+                "5690616",
+                "39",
+                "2",
+                "1:27.452",
+                "218.300",
+                "1"
+              ]
+            ]
+          },
+          {
+            "path": "db/races.db",
+            "context_folder": "db",
+            "data_format": "sqlite",
+            "size_bytes": 212992,
+            "table_count": 1,
+            "tables": [
+              {
+                "name": "races",
+                "column_count": 8,
+                "columns": [
+                  {
+                    "name": "raceId",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": true
+                  },
+                  {
+                    "name": "year",
+                    "type": "INTEGER",
+                    "not_null": true,
+                    "default": "0",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "round",
+                    "type": "INTEGER",
+                    "not_null": true,
+                    "default": "0",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "circuitId",
+                    "type": "INTEGER",
+                    "not_null": true,
+                    "default": "0",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "name",
+                    "type": "TEXT",
+                    "not_null": true,
+                    "default": "''",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "date",
+                    "type": "DATE",
+                    "not_null": true,
+                    "default": "'0000-00-00'",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "time",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "url",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  }
+                ],
+                "row_count": 976,
+                "create_sql": "CREATE TABLE races\n(\n    raceId    INTEGER\n        primary key autoincrement,\n    year      INTEGER default 0            not null,\n    round     INTEGER default 0            not null,\n    circuitId INTEGER default 0            not null,\n    name      TEXT    default ''           not null,\n    date      DATE    default '0000-00-00' not null,\n    time      TEXT,\n    url       TEXT unique,\n    foreign key (year) references seasons(year),\n    foreign key (circuitId) references circuits(circuitId)\n)"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "task_330",
+      "task_json": {
+        "difficulty": "hard",
+        "question": "What was the final score for the match on September 24, 2008, in the Belgian Jupiler League between the home team and the away team?"
+      },
+      "context": {
+        "format_counts": {
+          "csv": 1,
+          "doc": 1
+        },
+        "files": [
+          {
+            "path": "csv/Match.csv",
+            "context_folder": "csv",
+            "data_format": "csv",
+            "size_bytes": 279413107,
+            "column_count": 115,
+            "columns": [
+              "id",
+              "country_id",
+              "league_id",
+              "season",
+              "stage",
+              "date",
+              "match_api_id",
+              "home_team_api_id",
+              "away_team_api_id",
+              "home_team_goal",
+              "away_team_goal",
+              "home_player_X1",
+              "home_player_X2",
+              "home_player_X3",
+              "home_player_X4",
+              "home_player_X5",
+              "home_player_X6",
+              "home_player_X7",
+              "home_player_X8",
+              "home_player_X9",
+              "home_player_X10",
+              "home_player_X11",
+              "away_player_X1",
+              "away_player_X2",
+              "away_player_X3",
+              "away_player_X4",
+              "away_player_X5",
+              "away_player_X6",
+              "away_player_X7",
+              "away_player_X8",
+              "away_player_X9",
+              "away_player_X10",
+              "away_player_X11",
+              "home_player_Y1",
+              "home_player_Y2",
+              "home_player_Y3",
+              "home_player_Y4",
+              "home_player_Y5",
+              "home_player_Y6",
+              "home_player_Y7",
+              "home_player_Y8",
+              "home_player_Y9",
+              "home_player_Y10",
+              "home_player_Y11",
+              "away_player_Y1",
+              "away_player_Y2",
+              "away_player_Y3",
+              "away_player_Y4",
+              "away_player_Y5",
+              "away_player_Y6",
+              "away_player_Y7",
+              "away_player_Y8",
+              "away_player_Y9",
+              "away_player_Y10",
+              "away_player_Y11",
+              "home_player_1",
+              "home_player_2",
+              "home_player_3",
+              "home_player_4",
+              "home_player_5",
+              "home_player_6",
+              "home_player_7",
+              "home_player_8",
+              "home_player_9",
+              "home_player_10",
+              "home_player_11",
+              "away_player_1",
+              "away_player_2",
+              "away_player_3",
+              "away_player_4",
+              "away_player_5",
+              "away_player_6",
+              "away_player_7",
+              "away_player_8",
+              "away_player_9",
+              "away_player_10",
+              "away_player_11",
+              "goal",
+              "shoton",
+              "shotoff",
+              "foulcommit",
+              "card",
+              "cross",
+              "corner",
+              "possession",
+              "B365H",
+              "B365D",
+              "B365A",
+              "BWH",
+              "BWD",
+              "BWA",
+              "IWH",
+              "IWD",
+              "IWA",
+              "LBH",
+              "LBD",
+              "LBA",
+              "PSH",
+              "PSD",
+              "PSA",
+              "WHH",
+              "WHD",
+              "WHA",
+              "SJH",
+              "SJD",
+              "SJA",
+              "VCH",
+              "VCD",
+              "VCA",
+              "GBH",
+              "GBD",
+              "GBA",
+              "BSH",
+              "BSD",
+              "BSA"
+            ],
+            "row_count": 25979,
+            "sample_rows": [
+              [
+                "1",
+                "1",
+                "1",
+                "2008/2009",
+                "1",
+                "2008-08-17 00:00:00",
+                "492473",
+                "9987",
+                "9993",
+                "1",
+                "1",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "1.73",
+                "3.4",
+                "5.0",
+                "1.75",
+                "3.35",
+                "4.2",
+                "1.85",
+                "3.2",
+                "3.5",
+                "1.8",
+                "3.3",
+                "3.75",
+                "",
+                "",
+                "",
+                "1.7",
+                "3.3",
+                "4.33",
+                "1.9",
+                "3.3",
+                "4.0",
+                "1.65",
+                "3.4",
+                "4.5",
+                "1.78",
+                "3.25",
+                "4.0",
+                "1.73",
+                "3.4",
+                "4.2"
+              ]
+            ]
+          },
+          {
+            "path": "doc/League.md",
+            "context_folder": "doc",
+            "data_format": "markdown",
+            "size_bytes": 12732,
+            "line_count": 55,
+            "preview": "### The Continental Proving Grounds: A Strategic Overview of Europe's Footballing Arenas\n\nAn analysis of European football necessitates a foundational understanding of the primary competitive environments where talent is forged and legacies are built. This report provides a strategic profile of key "
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "task_344",
+      "task_json": {
+        "difficulty": "hard",
+        "question": "Among the male patients who have a normal level of white blood cells, how many of them have an abnormal fibrinogen level?"
+      },
+      "context": {
+        "format_counts": {
+          "csv": 2,
+          "doc": 1
+        },
+        "files": [
+          {
+            "path": "csv/Laboratory.csv",
+            "context_folder": "csv",
+            "data_format": "csv",
+            "size_bytes": 1531183,
+            "column_count": 44,
+            "columns": [
+              "ID",
+              "Date",
+              "GOT",
+              "GPT",
+              "LDH",
+              "ALP",
+              "TP",
+              "ALB",
+              "UA",
+              "UN",
+              "CRE",
+              "T-BIL",
+              "T-CHO",
+              "TG",
+              "CPK",
+              "GLU",
+              "WBC",
+              "RBC",
+              "HGB",
+              "HCT",
+              "PLT",
+              "PT",
+              "APTT",
+              "FG",
+              "PIC",
+              "TAT",
+              "TAT2",
+              "U-PRO",
+              "IGG",
+              "IGA",
+              "IGM",
+              "CRP",
+              "RA",
+              "RF",
+              "C3",
+              "C4",
+              "RNP",
+              "SM",
+              "SC170",
+              "SSA",
+              "SSB",
+              "CENTROMEA",
+              "DNA",
+              "DNA-II"
+            ],
+            "row_count": 13908,
+            "sample_rows": [
+              [
+                "27654",
+                "1991-09-11",
+                "34",
+                "36",
+                "567",
+                "166",
+                "4.5",
+                "3.3",
+                "3.8",
+                "29",
+                "0.8",
+                "0.3",
+                "165",
+                "",
+                "9",
+                "",
+                "5.0",
+                "2.6",
+                "6.4",
+                "20.3",
+                "227",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "339",
+                "145",
+                "46",
+                "0.6",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                ""
+              ]
+            ]
+          },
+          {
+            "path": "csv/patient_sex.csv",
+            "context_folder": "csv",
+            "data_format": "csv",
+            "size_bytes": 918,
+            "column_count": 2,
+            "columns": [
+              "ID",
+              "SEX"
+            ],
+            "row_count": 92,
+            "sample_rows": [
+              [
+                "43003",
+                "M"
+              ]
+            ]
+          },
+          {
+            "path": "doc/Patient.md",
+            "context_folder": "doc",
+            "data_format": "markdown",
+            "size_bytes": 55808,
+            "line_count": 441,
+            "preview": "### A Retrospective Cohort Analysis: Initial Demographic and Chronological Markers in a Longitudinal Case Series\n\n#### Introduction and Patient Demographics\n\nThis review presents a foundational analysis of a patient cohort, detailing the initial demographic and administrative data points critical fo"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "task_349",
+      "task_json": {
+        "difficulty": "hard",
+        "question": "What's Angela Sanders's major?"
+      },
+      "context": {
+        "format_counts": {
+          "csv": 1,
+          "doc": 1
+        },
+        "files": [
+          {
+            "path": "csv/member.csv",
+            "context_folder": "csv",
+            "data_format": "csv",
+            "size_bytes": 3575,
+            "column_count": 9,
+            "columns": [
+              "member_id",
+              "first_name",
+              "last_name",
+              "email",
+              "position",
+              "t_shirt_size",
+              "phone",
+              "zip",
+              "link_to_major"
+            ],
+            "row_count": 33,
+            "sample_rows": [
+              [
+                "rec1x5zBFIqoOuPW8",
+                "Angela",
+                "Sanders",
+                "angela.sanders@lpu.edu",
+                "Member",
+                "Medium",
+                "(651) 928-4507",
+                "55108",
+                "recxK3MHQFbR9J5uO"
+              ]
+            ]
+          },
+          {
+            "path": "doc/major.md",
+            "context_folder": "doc",
+            "data_format": "markdown",
+            "size_bytes": 74952,
+            "line_count": 446,
+            "preview": "MEMORANDUM\n\nTO: Office of the University Registrar; Council of Academic Deans\nFROM: Office of Institutional Data & Governance\nDATE: October 26, 2023\nSUBJECT: Comprehensive Roster of Affiliated Academic Programs for Organizational Administration\n\n1.0 Executive Summary\n\nThis document provides a defini"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "task_350",
+      "task_json": {
+        "difficulty": "hard",
+        "question": "Among the students from the Student_Club who attended the event \"Women's Soccer\", how many of them want a T-shirt that's in medium size?"
+      },
+      "context": {
+        "format_counts": {
+          "csv": 1,
+          "db": 1,
+          "doc": 2
+        },
+        "files": [
+          {
+            "path": "csv/member.csv",
+            "context_folder": "csv",
+            "data_format": "csv",
+            "size_bytes": 3575,
+            "column_count": 9,
+            "columns": [
+              "member_id",
+              "first_name",
+              "last_name",
+              "email",
+              "position",
+              "t_shirt_size",
+              "phone",
+              "zip",
+              "link_to_major"
+            ],
+            "row_count": 33,
+            "sample_rows": [
+              [
+                "rec1x5zBFIqoOuPW8",
+                "Angela",
+                "Sanders",
+                "angela.sanders@lpu.edu",
+                "Member",
+                "Medium",
+                "(651) 928-4507",
+                "55108",
+                "recxK3MHQFbR9J5uO"
+              ]
+            ]
+          },
+          {
+            "path": "db/attendance.db",
+            "context_folder": "db",
+            "data_format": "sqlite",
+            "size_bytes": 45056,
+            "table_count": 1,
+            "tables": [
+              {
+                "name": "attendance",
+                "column_count": 2,
+                "columns": [
+                  {
+                    "name": "link_to_event",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": true
+                  },
+                  {
+                    "name": "link_to_member",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": true
+                  }
+                ],
+                "row_count": 326,
+                "create_sql": "CREATE TABLE \"attendance\"\n(\n    link_to_event  TEXT,\n    link_to_member TEXT,\n    primary key (link_to_event, link_to_member),\n    foreign key (link_to_event) references event(event_id),\n    foreign key (link_to_member) references member(member_id)\n)"
+              }
+            ]
+          },
+          {
+            "path": "doc/event.md",
+            "context_folder": "doc",
+            "data_format": "markdown",
+            "size_bytes": 58770,
+            "line_count": 368,
+            "preview": "### Annual Engagement & Operations Review: A Strategic Briefing on Event Portfolio Performance\n\nThis document provides a comprehensive overview of the strategic units comprising our event portfolio for the preceding academic year. Each asset is analyzed based on its operational designation and engag"
+          },
+          {
+            "path": "doc/event_event.md",
+            "context_folder": "doc",
+            "data_format": "markdown",
+            "size_bytes": 60320,
+            "line_count": 370,
+            "preview": "### **Annual Engagement & Operations Review: A Strategic Briefing on Event Portfolio Performance**\n\nThis document provides a comprehensive overview of the strategic units comprising our event portfolio for the preceding academic year. Each asset is analyzed based on its operational designation and e"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "task_352",
+      "task_json": {
+        "difficulty": "hard",
+        "question": "How many times was the budget in Advertisement for \"Yearly Kickoff\" meeting more than \"October Meeting\"?"
+      },
+      "context": {
+        "format_counts": {
+          "csv": 1,
+          "doc": 1
+        },
+        "files": [
+          {
+            "path": "csv/event.csv",
+            "context_folder": "csv",
+            "data_format": "csv",
+            "size_bytes": 4733,
+            "column_count": 7,
+            "columns": [
+              "event_id",
+              "event_name",
+              "event_date",
+              "type",
+              "notes",
+              "location",
+              "status"
+            ],
+            "row_count": 42,
+            "sample_rows": [
+              [
+                "rec0Si5cQ4rJRVzd6",
+                "March Meeting",
+                "2020-03-10T12:00:00",
+                "Meeting",
+                "",
+                "MU 215",
+                "Open"
+              ]
+            ]
+          },
+          {
+            "path": "doc/budget.md",
+            "context_folder": "doc",
+            "data_format": "markdown",
+            "size_bytes": 62672,
+            "line_count": 359,
+            "preview": "### Strategic Review of Educational Program Budgetary Allocations\n\n#### Preamble\n\nThis briefing provides a detailed audit of individual budgetary units allocated for programmatic support within the educational domain. The following analysis profiles each strategic asset, documenting its designated p"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "task_355",
+      "task_json": {
+        "difficulty": "hard",
+        "question": "Write the full name of the member who spent money for water, veggie tray and supplies and include the cost of it."
+      },
+      "context": {
+        "format_counts": {
+          "csv": 1,
+          "doc": 1
+        },
+        "files": [
+          {
+            "path": "csv/expense.csv",
+            "context_folder": "csv",
+            "data_format": "csv",
+            "size_bytes": 2980,
+            "column_count": 7,
+            "columns": [
+              "expense_id",
+              "expense_description",
+              "expense_date",
+              "cost",
+              "approved",
+              "link_to_member",
+              "link_to_budget"
+            ],
+            "row_count": 32,
+            "sample_rows": [
+              [
+                "rec017x6R3hQqkLAo",
+                "Post Cards, Posters",
+                "2019-08-20",
+                "122.06",
+                "true",
+                "rec4BLdZHS2Blfp4v",
+                "recvKTAWAFKkVNnXQ"
+              ]
+            ]
+          },
+          {
+            "path": "doc/member.md",
+            "context_folder": "doc",
+            "data_format": "markdown",
+            "size_bytes": 33269,
+            "line_count": 225,
+            "preview": "### Strategic Roster Analysis: Profile Assessments of Key Educational Stakeholders\n\nIntroduction:\nThis briefing provides a detailed assessment of individual strategic units within the educational domain. Each profile has been compiled based on the latest verified data from the master stakeholder dat"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "task_379",
+      "task_json": {
+        "difficulty": "hard",
+        "question": "Tally the toxicology element of the 4th atom of each molecule that was carcinogenic."
+      },
+      "context": {
+        "format_counts": {
+          "csv": 1,
+          "doc": 1
+        },
+        "files": [
+          {
+            "path": "csv/atom.csv",
+            "context_folder": "csv",
+            "data_format": "csv",
+            "size_bytes": 218746,
+            "column_count": 3,
+            "columns": [
+              "atom_id",
+              "molecule_id",
+              "element"
+            ],
+            "row_count": 12333,
+            "sample_rows": [
+              [
+                "TR000_1",
+                "TR000",
+                "cl"
+              ]
+            ]
+          },
+          {
+            "path": "doc/molecule.md",
+            "context_folder": "doc",
+            "data_format": "markdown",
+            "size_bytes": 36408,
+            "line_count": 225,
+            "preview": "### Computational Analysis and Carcinogenic Potential Classification of Novel Tri-Ring Aromatic Compounds\n\nAbstract:\nThis paper presents the results of a comprehensive computational analysis performed on a newly synthesized series of molecular compounds. Utilizing advanced predictive toxicology mode"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "task_396",
+      "task_json": {
+        "difficulty": "hard",
+        "question": "In superheroes with height between 150 to 180, what is the percentage of heroes published by Marvel Comics?"
+      },
+      "context": {
+        "format_counts": {
+          "doc": 1,
+          "json": 1
+        },
+        "files": [
+          {
+            "path": "doc/superhero.md",
+            "context_folder": "doc",
+            "data_format": "markdown",
+            "size_bytes": 177990,
+            "line_count": 1087,
+            "preview": "### The Vanguard Registry: A Comprehensive Catalog of Strategic Units\n\nThis document provides a detailed encyclopedic overview of registered strategic units, outlining their designated codenames and civilian identities as per the latest intelligence audit. Each entry is cataloged for enthusiast and "
+          },
+          {
+            "path": "json/publisher.json",
+            "context_folder": "json",
+            "data_format": "json",
+            "size_bytes": 1713,
+            "fully_loaded": true,
+            "top_level_keys": [
+              "table",
+              "records"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "task_408",
+      "task_json": {
+        "difficulty": "hard",
+        "question": "How much faster in percentage is the champion than the driver who finished the race last in the 2008 Australian Grand Prix?"
+      },
+      "context": {
+        "format_counts": {
+          "db": 1,
+          "doc": 1
+        },
+        "files": [
+          {
+            "path": "db/results.db",
+            "context_folder": "db",
+            "data_format": "sqlite",
+            "size_bytes": 1007616,
+            "table_count": 1,
+            "tables": [
+              {
+                "name": "results",
+                "column_count": 18,
+                "columns": [
+                  {
+                    "name": "resultId",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": true
+                  },
+                  {
+                    "name": "raceId",
+                    "type": "INTEGER",
+                    "not_null": true,
+                    "default": "0",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "driverId",
+                    "type": "INTEGER",
+                    "not_null": true,
+                    "default": "0",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "constructorId",
+                    "type": "INTEGER",
+                    "not_null": true,
+                    "default": "0",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "number",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "grid",
+                    "type": "INTEGER",
+                    "not_null": true,
+                    "default": "0",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "position",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "positionText",
+                    "type": "TEXT",
+                    "not_null": true,
+                    "default": "''",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "positionOrder",
+                    "type": "INTEGER",
+                    "not_null": true,
+                    "default": "0",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "points",
+                    "type": "REAL",
+                    "not_null": true,
+                    "default": "0",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "laps",
+                    "type": "INTEGER",
+                    "not_null": true,
+                    "default": "0",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "time",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "milliseconds",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "fastestLap",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "rank",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": "0",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "fastestLapTime",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "fastestLapSpeed",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "statusId",
+                    "type": "INTEGER",
+                    "not_null": true,
+                    "default": "0",
+                    "primary_key": false
+                  }
+                ],
+                "row_count": 23657,
+                "create_sql": "CREATE TABLE results\n(\n    resultId        INTEGER\n        primary key autoincrement,\n    raceId          INTEGER default 0  not null,\n    driverId        INTEGER default 0  not null,\n    constructorId   INTEGER default 0  not null,\n    number          INTEGER,\n    grid            INTEGER default 0  not null,\n    position        INTEGER,\n    positionText    TEXT    default '' not null,\n    positionOrder   INTEGER default 0  not null,\n    points          REAL   default 0  not null,\n    laps            INTEGER default 0  not null,\n    time            TEXT,\n    milliseconds    INTEGER,\n    fastestLap      INTEGER,\n    rank            INTEGER default 0,\n    fastestLapTime  TEXT,\n    fastestLapSpeed TEXT,\n    statusId        INTEGER default 0  not null,\n    foreign key (raceId) references races(raceId),\n    foreign key (driverId) references drivers(driverId),\n    foreign key (constructorId) references constructors(constructorId),\n    foreign key (statusId) references status(statusId)\n)"
+              }
+            ]
+          },
+          {
+            "path": "doc/races.md",
+            "context_folder": "doc",
+            "data_format": "markdown",
+            "size_bytes": 86259,
+            "line_count": 661,
+            "preview": "### Official Steward's Summary: Chronological Race Event Verification\n\nThis document provides a formal and definitive summary of various Grand Prix events, ratifying their official designation and referencing their respective archival records. Each entry has been reviewed for accuracy against the of"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "task_415",
+      "task_json": {
+        "difficulty": "hard",
+        "question": "What is the constructor reference name of the champion in the 2009 Singapore Grand Prix? Please give its website."
+      },
+      "context": {
+        "format_counts": {
+          "db": 1,
+          "doc": 1,
+          "json": 1
+        },
+        "files": [
+          {
+            "path": "db/results.db",
+            "context_folder": "db",
+            "data_format": "sqlite",
+            "size_bytes": 1007616,
+            "table_count": 1,
+            "tables": [
+              {
+                "name": "results",
+                "column_count": 18,
+                "columns": [
+                  {
+                    "name": "resultId",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": true
+                  },
+                  {
+                    "name": "raceId",
+                    "type": "INTEGER",
+                    "not_null": true,
+                    "default": "0",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "driverId",
+                    "type": "INTEGER",
+                    "not_null": true,
+                    "default": "0",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "constructorId",
+                    "type": "INTEGER",
+                    "not_null": true,
+                    "default": "0",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "number",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "grid",
+                    "type": "INTEGER",
+                    "not_null": true,
+                    "default": "0",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "position",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "positionText",
+                    "type": "TEXT",
+                    "not_null": true,
+                    "default": "''",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "positionOrder",
+                    "type": "INTEGER",
+                    "not_null": true,
+                    "default": "0",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "points",
+                    "type": "REAL",
+                    "not_null": true,
+                    "default": "0",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "laps",
+                    "type": "INTEGER",
+                    "not_null": true,
+                    "default": "0",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "time",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "milliseconds",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "fastestLap",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "rank",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": "0",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "fastestLapTime",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "fastestLapSpeed",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "statusId",
+                    "type": "INTEGER",
+                    "not_null": true,
+                    "default": "0",
+                    "primary_key": false
+                  }
+                ],
+                "row_count": 23657,
+                "create_sql": "CREATE TABLE results\n(\n    resultId        INTEGER\n        primary key autoincrement,\n    raceId          INTEGER default 0  not null,\n    driverId        INTEGER default 0  not null,\n    constructorId   INTEGER default 0  not null,\n    number          INTEGER,\n    grid            INTEGER default 0  not null,\n    position        INTEGER,\n    positionText    TEXT    default '' not null,\n    positionOrder   INTEGER default 0  not null,\n    points          REAL   default 0  not null,\n    laps            INTEGER default 0  not null,\n    time            TEXT,\n    milliseconds    INTEGER,\n    fastestLap      INTEGER,\n    rank            INTEGER default 0,\n    fastestLapTime  TEXT,\n    fastestLapSpeed TEXT,\n    statusId        INTEGER default 0  not null,\n    foreign key (raceId) references races(raceId),\n    foreign key (driverId) references drivers(driverId),\n    foreign key (constructorId) references constructors(constructorId),\n    foreign key (statusId) references status(statusId)\n)"
+              }
+            ]
+          },
+          {
+            "path": "doc/races.md",
+            "context_folder": "doc",
+            "data_format": "markdown",
+            "size_bytes": 92407,
+            "line_count": 654,
+            "preview": "### Chronological Performance Dossier: A Granular Analysis of Key Championship Venues\n\nThis report provides a detailed examination of individual race events that have been instrumental in shaping championship outcomes. Each strategic unit is assessed based on its unique characteristics and historica"
+          },
+          {
+            "path": "json/constructors.json",
+            "context_folder": "json",
+            "data_format": "json",
+            "size_bytes": 40365,
+            "fully_loaded": true,
+            "top_level_keys": [
+              "table",
+              "records"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "task_418",
+      "task_json": {
+        "difficulty": "extreme",
+        "question": "Among the patients whose creatinine level is abnormal, how many of them aren't 70 yet?"
+      },
+      "context": {
+        "format_counts": {
+          "doc": 2
+        },
+        "files": [
+          {
+            "path": "doc/Laboratory.md",
+            "context_folder": "doc",
+            "data_format": "markdown",
+            "size_bytes": 286513,
+            "line_count": 1696,
+            "preview": "### Hepatobiliary Enzyme Signatures and Total Bilirubin Levels in a Retrospective Cohort: A Foundational Analysis for Autoimmune Disease Progression Studies\n\n#### Abstract\nThis document presents an initial characterization of liver function panels from a longitudinal patient cohort. The analysis foc"
+          },
+          {
+            "path": "doc/Patient.md",
+            "context_folder": "doc",
+            "data_format": "markdown",
+            "size_bytes": 84958,
+            "line_count": 752,
+            "preview": "### Patient Health Summary: Demographic and Record Initiation Overview\n\nThis document provides a summary of foundational patient information, outlining key demographic details and the timeline of each individual's engagement with our health services.\n\nBeginning with the patient profile associated wi"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "task_420",
+      "task_json": {
+        "difficulty": "hard",
+        "question": "What percentage of cards with format commander and legal status do not have a content warning?"
+      },
+      "context": {
+        "format_counts": {
+          "db": 1,
+          "doc": 1
+        },
+        "files": [
+          {
+            "path": "db/cards.db",
+            "context_folder": "db",
+            "data_format": "sqlite",
+            "size_bytes": 61579264,
+            "table_count": 1,
+            "tables": [
+              {
+                "name": "cards",
+                "column_count": 74,
+                "columns": [
+                  {
+                    "name": "id",
+                    "type": "INTEGER",
+                    "not_null": true,
+                    "default": null,
+                    "primary_key": true
+                  },
+                  {
+                    "name": "artist",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "asciiName",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "availability",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "borderColor",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "cardKingdomFoilId",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "cardKingdomId",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "colorIdentity",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "colorIndicator",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "colors",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "convertedManaCost",
+                    "type": "REAL",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "duelDeck",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "edhrecRank",
+                    "type": "INTEGER",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "faceConvertedManaCost",
+                    "type": "REAL",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "faceName",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "flavorName",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "flavorText",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "frameEffects",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "frameVersion",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "hand",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "hasAlternativeDeckLimit",
+                    "type": "INTEGER",
+                    "not_null": true,
+                    "default": "0",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "hasContentWarning",
+                    "type": "INTEGER",
+                    "not_null": true,
+                    "default": "0",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "hasFoil",
+                    "type": "INTEGER",
+                    "not_null": true,
+                    "default": "0",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "hasNonFoil",
+                    "type": "INTEGER",
+                    "not_null": true,
+                    "default": "0",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "isAlternative",
+                    "type": "INTEGER",
+                    "not_null": true,
+                    "default": "0",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "isFullArt",
+                    "type": "INTEGER",
+                    "not_null": true,
+                    "default": "0",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "isOnlineOnly",
+                    "type": "INTEGER",
+                    "not_null": true,
+                    "default": "0",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "isOversized",
+                    "type": "INTEGER",
+                    "not_null": true,
+                    "default": "0",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "isPromo",
+                    "type": "INTEGER",
+                    "not_null": true,
+                    "default": "0",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "isReprint",
+                    "type": "INTEGER",
+                    "not_null": true,
+                    "default": "0",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "isReserved",
+                    "type": "INTEGER",
+                    "not_null": true,
+                    "default": "0",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "isStarter",
+                    "type": "INTEGER",
+                    "not_null": true,
+                    "default": "0",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "isStorySpotlight",
+                    "type": "INTEGER",
+                    "not_null": true,
+                    "default": "0",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "isTextless",
+                    "type": "INTEGER",
+                    "not_null": true,
+                    "default": "0",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "isTimeshifted",
+                    "type": "INTEGER",
+                    "not_null": true,
+                    "default": "0",
+                    "primary_key": false
+                  },
+                  {
+                    "name": "keywords",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "layout",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "leadershipSkills",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "life",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "loyalty",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "manaCost",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "mcmId",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "mcmMetaId",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "mtgArenaId",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "mtgjsonV4Id",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "mtgoFoilId",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "mtgoId",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "multiverseId",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "name",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "number",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "originalReleaseDate",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "originalText",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "originalType",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "otherFaceIds",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "power",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "printings",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "promoTypes",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "purchaseUrls",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "rarity",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "scryfallId",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "scryfallIllustrationId",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "scryfallOracleId",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "setCode",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "side",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "subtypes",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "supertypes",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "tcgplayerProductId",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "text",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "toughness",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "type",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "types",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "uuid",
+                    "type": "TEXT",
+                    "not_null": true,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "variations",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  },
+                  {
+                    "name": "watermark",
+                    "type": "TEXT",
+                    "not_null": false,
+                    "default": null,
+                    "primary_key": false
+                  }
+                ],
+                "row_count": 56822,
+                "create_sql": "CREATE TABLE \"cards\"\n(\n    id                      INTEGER           not null\n        primary key autoincrement,\n    artist                  TEXT,\n    asciiName               TEXT,\n    availability            TEXT,\n    borderColor             TEXT,\n    cardKingdomFoilId       TEXT,\n    cardKingdomId           TEXT,\n    colorIdentity           TEXT,\n    colorIndicator          TEXT,\n    colors                  TEXT,\n    convertedManaCost       REAL,\n    duelDeck                TEXT,\n    edhrecRank              INTEGER,\n    faceConvertedManaCost   REAL,\n    faceName                TEXT,\n    flavorName              TEXT,\n    flavorText              TEXT,\n    frameEffects            TEXT,\n    frameVersion            TEXT,\n    hand                    TEXT,\n    hasAlternativeDeckLimit INTEGER default 0 not null,\n    hasContentWarning       INTEGER default 0 not null,\n    hasFoil                 INTEGER default 0 not null,\n    hasNonFoil              INTEGER default 0 not null,\n    isAlternative           INTEGER default 0 not null,\n    isFullArt               INTEGER default 0 not null,\n    isOnlineOnly            INTEGER default 0 not null,\n    isOversized             INTEGER default 0 not null,\n    isPromo                 INTEGER default 0 not null,\n    isReprint               INTEGER default 0 not null,\n    isReserved              INTEGER default 0 not null,\n    isStarter               INTEGER default 0 not null,\n    isStorySpotlight        INTEGER default 0 not null,\n    isTextless              INTEGER default 0 not null,\n    isTimeshifted           INTEGER default 0 not null,\n    keywords                TEXT,\n    layout                  TEXT,\n    leadershipSkills        TEXT,\n    life                    TEXT,\n    loyalty                 TEXT,\n    manaCost                TEXT,\n    mcmId                   TEXT,\n    mcmMetaId               TEXT,\n    mtgArenaId              TEXT,\n    mtgjsonV4Id             TEXT,\n    mtgoFoilId              TEXT,\n    mtgoId                  TEXT,\n    multiverseId            TEXT,\n    name                    TEXT,\n    number                  TEXT,\n    originalReleaseDate     TEXT,\n    originalText            TEXT,\n    originalType            TEXT,\n    otherFaceIds            TEXT,\n    power                   TEXT,\n    printings               TEXT,\n    promoTypes              TEXT,\n    purchaseUrls            TEXT,\n    rarity                  TEXT,\n    scryfallId              TEXT,\n    scryfallIllustrationId  TEXT,\n    scryfallOracleId        TEXT,\n    setCode                 TEXT,\n    side                    TEXT,\n    subtypes                TEXT,\n    supertypes              TEXT,\n    tcgplayerProductId      TEXT,\n    text                    TEXT,\n    toughness               TEXT,\n    type                    TEXT,\n    types                   TEXT,\n    uuid                    TEXT              not null\n        unique,\n    variations              TEXT,\n    watermark               TEXT\n)"
+              }
+            ]
+          },
+          {
+            "path": "doc/legalities.md",
+            "context_folder": "doc",
+            "data_format": "markdown",
+            "size_bytes": 56877,
+            "line_count": 443,
+            "preview": "### Portfolio of Sanctioned Assets: A Legality Compendium\n\nThis document provides a detailed audit of the sanctioned strategic units within the current competitive framework. Each entry represents a specific legality ruling, linking a portfolio asset to its corresponding card identifier. The followi"
+          }
+        ]
+      }
+    }
+  ]
+}
