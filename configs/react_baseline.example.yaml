@@ -19,7 +19,7 @@ run:
 
 difficulty_overrides:
   easy:
-    max_steps: 8
+    max_steps: 10
     max_retries: 1
     task_timeout_seconds: 180
   medium:
@@ -31,6 +31,6 @@ difficulty_overrides:
     max_retries: 2
     task_timeout_seconds: 900
   extreme:
-    max_steps: 10
+    max_steps: 8
     max_retries: 1
     task_timeout_seconds: 90
