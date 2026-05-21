@@ -13,12 +13,13 @@ from data_agent_baseline.tools.context_profile import (
     retrieve_context_chunks,
 )
 from data_agent_baseline.tools.data_query import execute_data_query
+from data_agent_baseline.tools.question_contract import build_question_contract
 from data_agent_baseline.tools.sqlite import inspect_sqlite_schema
 
 
 def _task(tmp_path: Path, *, question: str = "List all matching names.") -> PublicTask:
     context_dir = tmp_path / "context"
-    context_dir.mkdir()
+    context_dir.mkdir(exist_ok=True)
     return PublicTask(
         record=TaskRecord(task_id="task_test", difficulty="hard", question=question),
         assets=TaskAssets(task_dir=tmp_path, context_dir=context_dir),
@@ -103,6 +104,22 @@ def test_plan_knowledge_returns_full_knowledge_with_profile_summary(tmp_path: Pa
     assert "# Lab Rules" in result["knowledge_content"]
     assert "# Billing" in result["knowledge_content"]
     assert result["knowledge_char_count"] == len(result["knowledge_content"])
+
+
+def test_question_contract_warns_about_missing_required_fields(tmp_path: Path) -> None:
+    task = _task(tmp_path, question="Which event has the lowest cost?")
+
+    result = build_question_contract(
+        task,
+        {
+            "requested_output_attributes": ["event_name"],
+            "metric_or_formula": "minimum cost",
+        },
+    )
+
+    assert result["contract"]["requested_output_attributes"] == ["event_name"]
+    assert any("grain" in warning for warning in result["warnings"])
+    assert any("helper_attributes" in warning for warning in result["warnings"])
 
 
 def test_execute_data_query_joins_csv_json_and_sqlite(tmp_path: Path) -> None:
@@ -195,4 +212,58 @@ def test_validate_answer_warns_about_zero_values_and_joined_names(tmp_path: Path
     )
 
     assert any("all numeric answer values are zero" in item for item in zero_warning["warnings"])
-    assert any("concatenate first_name/last_name" in item for item in name_warning["warnings"])
+    assert any("first_name/last_name" in item for item in name_warning["warnings"])
+
+
+def test_validate_answer_requests_semantic_notes_without_blocking(tmp_path: Path) -> None:
+    task = _task(tmp_path, question="Which event has the lowest cost?")
+
+    result = validate_answer_table(
+        task,
+        columns=["event_name"],
+        rows=[["November Speaker"]],
+        notes="Computed with execute_data_query from csv/events.csv.",
+    )
+
+    assert result["ok"]
+    assert any("semantic evidence" in item for item in result["warnings"])
+
+
+def test_validate_answer_allows_requested_average_columns(tmp_path: Path) -> None:
+    task = _task(
+        tmp_path,
+        question="What are the average UpVotes and average Age for users with more than 10 posts?",
+    )
+
+    result = validate_answer_table(
+        task,
+        columns=["avg_upvotes", "avg_age"],
+        rows=[[182.28, 34.08]],
+        notes=(
+            "Computed with execute_data_query. Formula AVG(UpVotes) and AVG(Age), grain user row, "
+            "join keys users.Id = posts.OwnerUserId, checked ties not applicable, knowledge rule none applicable."
+        ),
+    )
+
+    assert result["ok"]
+    assert not any("separate requested output attributes" in item for item in result["warnings"])
+
+
+def test_validate_answer_compares_latest_question_contract(tmp_path: Path) -> None:
+    task = _task(tmp_path, question="Give their consumption status in August 2012.")
+
+    result = validate_answer_table(
+        task,
+        columns=["CustomerID", "Consumption"],
+        rows=[["123", "1903.2"]],
+        notes=(
+            "Computed with execute_data_query. Formula filter then select consumption, grain customer row, "
+            "join keys CustomerID, checked ties not applicable, knowledge rule none applicable."
+        ),
+        question_contract={
+            "requested_output_attributes": ["Consumption"],
+        },
+    )
+
+    assert result["ok"]
+    assert any("answer columns differ from the latest question_contract" in item for item in result["warnings"])

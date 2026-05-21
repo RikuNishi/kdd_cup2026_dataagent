@@ -3,7 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 
 from data_agent_baseline.agents.model import ModelMessage
-from data_agent_baseline.agents.react import ReActAgent, ReActAgentConfig, parse_model_step
+from data_agent_baseline.agents.react import ReActAgent, ReActAgentConfig, _build_step_summary, parse_model_step
+from data_agent_baseline.agents.runtime import StepRecord
 from data_agent_baseline.benchmark.schema import PublicTask, TaskAssets, TaskRecord
 from data_agent_baseline.tools.registry import create_default_tool_registry
 
@@ -122,13 +123,24 @@ def test_agent_v2_tool_flow_profiles_queries_validates_and_answers(tmp_path: Pat
         '{"thought":"profile first","action":"profile_context","action_input":{}}',
         '{"thought":"plan knowledge","action":"plan_knowledge","action_input":{}}',
         (
+            '{"thought":"lock contract","action":"question_contract",'
+            '"action_input":{"requested_output_attributes":["name"],'
+            '"filters":[],"metric_or_formula":"highest score",'
+            '"grain":"member row","grouping":"none","ranking":"score desc",'
+            '"tie_rule":"top one only after checking ties","join_keys":[],'
+            '"knowledge_rules_used":["none applicable"],'
+            '"helper_attributes":["score"],'
+            '"ambiguities_checked":["name is the requested output"]}}'
+        ),
+        (
             '{"thought":"query structured data","action":"execute_data_query",'
             '"action_input":{"sources":["csv/value_scores.csv"],'
             '"sql":"SELECT name FROM value_scores ORDER BY score DESC LIMIT 1","limit":10}}'
         ),
         (
             '{"thought":"validate candidate","action":"validate_answer",'
-            '"action_input":{"columns":["name"],"rows":[["Lin"]],"notes":"Top score is unique."}}'
+            '"action_input":{"columns":["name"],"rows":[["Lin"]],'
+            '"notes":"Computed with execute_data_query. Formula highest score, grain member row, join keys none, checked ties unique, knowledge rule none applicable."}}'
         ),
         (
             '{"thought":"submit","action":"answer",'
@@ -139,7 +151,7 @@ def test_agent_v2_tool_flow_profiles_queries_validates_and_answers(tmp_path: Pat
     agent = ReActAgent(
         model=model,
         tools=create_default_tool_registry(),
-        config=ReActAgentConfig(max_steps=5),
+        config=ReActAgentConfig(max_steps=6),
     )
 
     result = agent.run(task)
@@ -148,9 +160,146 @@ def test_agent_v2_tool_flow_profiles_queries_validates_and_answers(tmp_path: Pat
     assert [step.action for step in result.steps] == [
         "profile_context",
         "plan_knowledge",
+        "question_contract",
         "execute_data_query",
         "validate_answer",
         "answer",
     ]
+    assert result.answer is not None
+    assert result.answer.rows == [["Lin"]]
+
+
+def test_step_summary_preserves_contract_and_query_facts() -> None:
+    contract_step = StepRecord(
+        step_index=3,
+        thought="lock contract",
+        action="question_contract",
+        action_input={},
+        raw_response="{}",
+        observation={
+            "tool": "question_contract",
+            "content": {
+                "contract": {
+                    "requested_output_attributes": ["name"],
+                    "metric_or_formula": "highest score",
+                    "grain": "member row",
+                    "grouping": "none",
+                    "ranking": "score desc",
+                    "tie_rule": "include ties",
+                    "join_keys": [],
+                    "helper_attributes": ["score"],
+                    "ambiguities_checked": ["name vs id"],
+                },
+                "warnings": [],
+            },
+        },
+        ok=True,
+    )
+    query_step = StepRecord(
+        step_index=4,
+        thought="query",
+        action="execute_data_query",
+        action_input={},
+        raw_response="{}",
+        observation={
+            "tool": "execute_data_query",
+            "content": {
+                "columns": ["name"],
+                "rows": [["Lin"], ["Ada"], ["Grace"], ["Katherine"]],
+                "row_count": 4,
+                "truncated": False,
+            },
+        },
+        ok=True,
+    )
+
+    assert "requested_output_attributes" in _build_step_summary(contract_step)
+    query_summary = _build_step_summary(query_step)
+    assert "row_count" in query_summary
+    assert "preview_rows" in query_summary
+    assert "Katherine" not in query_summary
+
+
+def test_agent_projects_helper_columns_before_answer(tmp_path: Path) -> None:
+    task = PublicTask(
+        record=TaskRecord(
+            task_id="task_test",
+            difficulty="easy",
+            question="Which event has the lowest cost?",
+        ),
+        assets=TaskAssets(task_dir=tmp_path, context_dir=tmp_path / "context"),
+    )
+    task.context_dir.mkdir()
+    responses = [
+        (
+            '{"thought":"validate candidate","action":"validate_answer",'
+            '"action_input":{"columns":["event_name","cost"],'
+            '"rows":[["November Speaker",6.0]],'
+            '"notes":"Computed with execute_data_query and checked the minimum cost tie."}}'
+        ),
+        (
+            '{"thought":"submit with helper column","action":"answer",'
+            '"action_input":{"columns":["event_name","cost"],"rows":[["November Speaker",6.0]]}}'
+        ),
+        (
+            '{"thought":"remove helper column","action":"answer",'
+            '"action_input":{"columns":["event_name"],"rows":[["November Speaker"]]}}'
+        ),
+    ]
+    model = RecordingModelAdapter(responses)
+    agent = ReActAgent(
+        model=model,
+        tools=create_default_tool_registry(),
+        config=ReActAgentConfig(max_steps=3),
+    )
+
+    result = agent.run(task)
+
+    assert result.succeeded
+    assert [step.action for step in result.steps] == [
+        "validate_answer",
+        "answer",
+    ]
+    assert result.steps[1].observation["content"]["auto_submitted"]
+    assert "projected helper columns" in str(result.steps[1].observation)
+    assert result.answer is not None
+    assert result.answer.columns == ["event_name"]
+
+
+def test_agent_near_step_limit_prioritizes_submission(tmp_path: Path) -> None:
+    task = _task(tmp_path)
+    csv_dir = task.context_dir / "csv"
+    csv_dir.mkdir()
+    (csv_dir / "values.csv").write_text("name,score\nAda,10\nLin,20\n", encoding="utf-8")
+    responses = [
+        (
+            '{"thought":"query candidate","action":"execute_data_query",'
+            '"action_input":{"sources":["csv/values.csv"],'
+            '"sql":"SELECT name FROM values ORDER BY score DESC LIMIT 1","limit":10}}'
+        ),
+        '{"thought":"keep exploring","action":"list_context","action_input":{"max_depth":3}}',
+        (
+            '{"thought":"validate now","action":"validate_answer",'
+            '"action_input":{"columns":["name"],"rows":[["Lin"]],'
+            '"notes":"Computed with execute_data_query. Formula highest score, grain row, join keys none, checked ties unique, knowledge rule none applicable."}}'
+        ),
+    ]
+    model = RecordingModelAdapter(responses)
+    agent = ReActAgent(
+        model=model,
+        tools=create_default_tool_registry(),
+        config=ReActAgentConfig(max_steps=3),
+    )
+
+    result = agent.run(task)
+
+    assert result.succeeded
+    assert [step.action for step in result.steps] == [
+        "execute_data_query",
+        "near_step_limit_submit",
+        "validate_answer",
+        "answer",
+    ]
+    assert result.steps[-1].observation["content"]["auto_submitted"]
     assert result.answer is not None
     assert result.answer.rows == [["Lin"]]

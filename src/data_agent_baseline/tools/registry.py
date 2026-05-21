@@ -22,6 +22,7 @@ from data_agent_baseline.tools.filesystem import (
     resolve_context_path,
 )
 from data_agent_baseline.tools.python_exec import execute_python_code
+from data_agent_baseline.tools.question_contract import build_question_contract
 from data_agent_baseline.tools.sqlite import execute_read_only_sql, inspect_sqlite_schema
 
 EXECUTE_PYTHON_TIMEOUT_SECONDS = 30
@@ -123,6 +124,15 @@ def _plan_knowledge(task: PublicTask, _: dict[str, Any]) -> ToolExecutionResult:
     )
 
 
+def _question_contract(task: PublicTask, action_input: dict[str, Any]) -> ToolExecutionResult:
+    """質問解釈の契約を trace に残すリクエストを処理する。"""
+
+    return ToolExecutionResult(
+        ok=True,
+        content=build_question_contract(task, action_input),
+    )
+
+
 def _retrieve_context(task: PublicTask, action_input: dict[str, Any]) -> ToolExecutionResult:
     """文書 chunk 検索リクエストを処理する。"""
 
@@ -164,6 +174,9 @@ def _validate_answer(task: PublicTask, action_input: dict[str, Any]) -> ToolExec
         columns=action_input.get("columns"),
         rows=action_input.get("rows"),
         notes=str(action_input.get("notes", "")),
+        question_contract=action_input.get("_question_contract")
+        if isinstance(action_input.get("_question_contract"), dict)
+        else None,
     )
     return ToolExecutionResult(ok=bool(content["ok"]), content=content)
 
@@ -303,6 +316,28 @@ def create_default_tool_registry() -> ToolRegistry:
             ),
             input_schema={},
         ),
+        "question_contract": ToolSpec(
+            name="question_contract",
+            description=(
+                "Record the planned interpretation of the question before querying data. "
+                "Use immediately after plan_knowledge. Declare final requested output attributes, filters, "
+                "metric/formula, grain, grouping, ranking/tie rules, join keys, knowledge rules used, "
+                "helper attributes that must not be output, and ambiguities checked."
+            ),
+            input_schema={
+                "requested_output_attributes": ["final_column_name"],
+                "filters": ["condition and source column"],
+                "metric_or_formula": "formula or none",
+                "grain": "row/entity grain for filtering and aggregation",
+                "grouping": "grouping keys or none",
+                "ranking": "ranking/sorting rule or none",
+                "tie_rule": "include all ties or no ranking",
+                "join_keys": ["left.key = right.key"],
+                "knowledge_rules_used": ["rule from knowledge.md or none applicable"],
+                "helper_attributes": ["columns used only to filter/join/rank/compute"],
+                "ambiguities_checked": ["ambiguous term and chosen interpretation"],
+            },
+        ),
         "list_context": ToolSpec(
             name="list_context",
             description=(
@@ -372,6 +407,7 @@ def create_default_tool_registry() -> ToolRegistry:
         "list_context": _list_context,
         "plan_knowledge": _plan_knowledge,
         "profile_context": _profile_context,
+        "question_contract": _question_contract,
         "read_csv": _read_csv,
         "read_doc": _read_doc,
         "read_json": _read_json,
