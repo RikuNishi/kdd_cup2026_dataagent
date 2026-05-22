@@ -6,10 +6,10 @@ agent:
   api_base: YOUR_API_BASE_URL
   api_key: YOUR_API_KEY
   max_steps: 20
-  temperature: 0.5
+  temperature: 0.1
   max_output_tokens: 4096
   request_timeout_seconds: 180
-  max_retries: 1
+  max_retries: 3
 
 run:
   output_dir: artifacts/runs
@@ -19,18 +19,18 @@ run:
 
 difficulty_overrides:
   easy:
-    max_steps: 10
-    max_retries: 1
-    task_timeout_seconds: 180
+    max_steps: 15
+    max_retries: 3
+    task_timeout_seconds: 240
   medium:
-    max_steps: 16
-    max_retries: 1
+    max_steps: 20
+    max_retries: 3
     task_timeout_seconds: 360
   hard:
-    max_steps: 24
-    max_retries: 2
-    task_timeout_seconds: 900
+    max_steps: 30
+    max_retries: 3
+    task_timeout_seconds: 720
   extreme:
-    max_steps: 8
-    max_retries: 1
-    task_timeout_seconds: 90
+    max_steps: 15
+    max_retries: 3
+    task_timeout_seconds: 240

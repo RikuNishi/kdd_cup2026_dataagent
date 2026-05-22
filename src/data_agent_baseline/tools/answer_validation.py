@@ -22,18 +22,6 @@ SOURCE_EVIDENCE_PATTERN = re.compile(
     r"sql|python|query|computed|calculated|grouped|filtered|joined|source|table|csv|json|db|doc)\b",
     flags=re.IGNORECASE,
 )
-HELPER_COLUMN_PATTERN = re.compile(
-    r"(^id$|_id$|id$|score|cost|rank|position|order|date|time|key|count|sum|total)",
-    flags=re.IGNORECASE,
-)
-AVERAGE_COLUMN_PATTERN = re.compile(r"(^avg_|average|mean)", flags=re.IGNORECASE)
-SEMANTIC_NOTE_PATTERNS = {
-    "formula_or_aggregation": re.compile(r"\b(formula|aggregation|aggregate|sum|avg|average|count|ratio|divid|minus|difference|calculated|computed)\b", re.IGNORECASE),
-    "grain": re.compile(r"\b(grain|row|entity|per |grouped by|group by|level)\b", re.IGNORECASE),
-    "join_keys": re.compile(r"\b(join key|join keys|join|linked|foreign key|=)\b", re.IGNORECASE),
-    "tie_check": re.compile(r"\b(tie|ties|tied|unique|no tie|checked)\b", re.IGNORECASE),
-    "knowledge_rule": re.compile(r"\b(knowledge|rule|definition|none applicable|not applicable)\b", re.IGNORECASE),
-}
 
 
 def _is_numeric_like(value: Any) -> bool:
@@ -64,60 +52,12 @@ def _looks_like_joined_name(value: Any) -> bool:
     return bool(re.search(r"\S+\s+\S+", text))
 
 
-def _question_tokens(question: str) -> set[str]:
-    """質問文から列名照合用の token 集合を作る。"""
-
-    return {token.lower() for token in re.findall(r"[A-Za-z0-9]+", question)}
-
-
-def _column_tokens(column: str) -> set[str]:
-    """列名から質問文照合用の token 集合を作る。"""
-
-    return {
-        token.lower()
-        for token in re.split(r"[^A-Za-z0-9]+", column)
-        if token and token.lower() not in {"avg", "average", "sum", "total", "count"}
-    }
-
-
-def _column_looks_requested(column: str, question: str) -> bool:
-    """列名が質問で直接求められた属性らしいかを緩く判定する。"""
-
-    q_tokens = _question_tokens(question)
-    c_tokens = _column_tokens(column)
-    if not c_tokens:
-        return False
-    if c_tokens <= q_tokens:
-        if AVERAGE_COLUMN_PATTERN.search(column):
-            return bool({"avg", "average", "mean"} & q_tokens)
-        return True
-    return False
-
-
-def _has_helper_like_column(columns: list[str], question: str) -> bool:
-    """回答列に helper 属性らしい列が含まれるかを返す。"""
-
-    ranking_question = bool(TIE_HINT_PATTERN.search(question))
-    for column in columns:
-        normalized_column = column.strip().lower()
-        if not normalized_column:
-            continue
-        if _column_looks_requested(normalized_column, question) and not (
-            ranking_question and re.search(r"\b(cost|score|rank|position|date|time|total|count)\b", normalized_column)
-        ):
-            continue
-        if HELPER_COLUMN_PATTERN.search(normalized_column):
-            return True
-    return False
-
-
 def validate_answer_table(
     task: PublicTask,
     *,
     columns: Any,
     rows: Any,
     notes: str = "",
-    question_contract: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """answer tool に渡す前の候補 table を検査し、警告とエラーを返す。"""
 
@@ -148,61 +88,11 @@ def validate_answer_table(
     question = task.question
     row_count = len(normalized_rows)
     column_count = len(columns)
-    requested_contract_columns: list[str] = []
-    if isinstance(question_contract, dict):
-        raw_requested = question_contract.get("requested_output_attributes")
-        if isinstance(raw_requested, list):
-            requested_contract_columns = [
-                str(column).strip()
-                for column in raw_requested
-                if str(column).strip()
-            ]
-        if requested_contract_columns:
-            normalized_contract_columns = {
-                re.sub(r"[^a-z0-9]+", "", column.lower())
-                for column in requested_contract_columns
-            }
-            normalized_answer_columns = {
-                re.sub(r"[^a-z0-9]+", "", str(column).lower())
-                for column in columns
-            }
-            if normalized_contract_columns != normalized_answer_columns:
-                warnings.append(
-                    "answer columns differ from the latest question_contract requested_output_attributes. "
-                    f"contract={requested_contract_columns}; answer={columns}. Revise columns or update the "
-                    "contract before submitting."
-                )
-        id_like_requested = [
-            column
-            for column in requested_contract_columns
-            if re.search(r"(^id$|_id$|id$|customerid|personid|userid)", column, flags=re.IGNORECASE)
-        ]
-        if id_like_requested and not re.search(r"\b(id|identifier|number|no\\.|customer id|user id|person id)\b", question, flags=re.IGNORECASE):
-            warnings.append(
-                "question_contract requests identifier-like output columns, but the question does not explicitly "
-                "ask for identifiers. Verify whether those IDs are helper attributes."
-            )
     if row_count == 0:
-        warnings.append(
-            "answer has zero rows; before submitting, verify date coverage, alternate formats, spelling/case, "
-            "related files, and join keys. Empty answers are valid only after those checks."
-        )
+        warnings.append("answer has zero rows; only use this when the observed data truly has no matches.")
 
-    has_helper_like_column = column_count > 1 and _has_helper_like_column(columns, question)
-    if SCALAR_QUESTION_PATTERN.search(question) and column_count > 1 and (
-        column_count > 2 or has_helper_like_column
-    ):
-        warnings.append(
-            "question appears scalar or narrow; separate requested output attributes from helper attributes. "
-            "Remove values used only for filtering, joining, grouping, ranking, sorting, formula calculation, "
-            "or verification unless the question directly asks for them."
-        )
-    elif has_helper_like_column:
-        warnings.append(
-            "separate requested output attributes from helper attributes. Remove values used only for filtering, "
-            "joining, grouping, ranking, sorting, formula calculation, or verification unless the question directly "
-            "asks for them."
-        )
+    if SCALAR_QUESTION_PATTERN.search(question) and column_count > 2:
+        warnings.append("question appears scalar or narrow; extra columns can create redundancy penalty.")
 
     if MULTI_ROW_QUESTION_PATTERN.search(question) and row_count == 1:
         warnings.append("question may request multiple rows; verify that only one result is valid.")
@@ -243,9 +133,8 @@ def validate_answer_table(
         ]
         if joined_name_cells:
             warnings.append(
-                "single name column contains space-joined values; if the source has first_name/last_name or similar "
-                "separate fields, prefer those original source columns unless the question explicitly requires one "
-                "combined string column."
+                "single name column contains space-joined values; verify you did not concatenate first_name/last_name "
+                "or other source columns unless explicitly required."
             )
 
     if not notes.strip():
@@ -254,18 +143,6 @@ def validate_answer_table(
         warnings.append(
             "notes do not mention a source data tool/query; verify the answer was computed from source data, not only observations."
         )
-    if notes.strip():
-        missing_semantic_notes = [
-            name
-            for name, pattern in SEMANTIC_NOTE_PATTERNS.items()
-            if pattern.search(notes) is None
-        ]
-        if missing_semantic_notes:
-            warnings.append(
-                "notes should state semantic evidence before answer: "
-                f"{', '.join(missing_semantic_notes)}. Include formula/aggregation, grain, join keys, "
-                "tie check, and knowledge rule applied or none applicable."
-            )
 
     return {
         "ok": not errors,
@@ -276,9 +153,7 @@ def validate_answer_table(
         "row_count": row_count,
         "question": question,
         "recommendation": (
-            "Warnings do not block submission. If steps remain, revise the candidate to address them, especially by "
-            "outputting only requested attributes, removing helper attributes, or preserving original source columns. "
-            "If you are near the step limit, submit the best verified table rather than leaving the task unanswered."
+            "Call answer with this table if warnings were checked against observed data."
             if not errors
             else "Fix validation errors before calling answer."
         ),

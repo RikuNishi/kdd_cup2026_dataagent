@@ -11,14 +11,9 @@ from data_agent_baseline.agents.prompt import (
     build_system_prompt,
     build_task_prompt,
 )
-from data_agent_baseline.agents.answer_repair import (
-    REPAIR_ACTION,
-    build_answer_repair_observation,
-    project_helper_columns_from_answer,
-)
 from data_agent_baseline.agents.runtime import AgentRunResult, AgentRuntimeState, StepRecord
-from data_agent_baseline.benchmark.schema import PublicTask
-from data_agent_baseline.tools.registry import ToolExecutionResult, ToolRegistry
+from data_agent_baseline.benchmark.schema import AnswerTable, PublicTask
+from data_agent_baseline.tools.registry import ToolRegistry
 
 
 @dataclass(frozen=True, slots=True)
@@ -31,9 +26,6 @@ INVALID_RESPONSE_ASSISTANT_MESSAGE = (
     "Follow the observation repair instructions exactly."
 )
 MAX_HISTORY_STEPS_IN_CONTEXT = 8
-SUMMARY_PREVIEW_ROWS = 3
-NEAR_STEP_LIMIT_ACTION = "near_step_limit_submit"
-QUERY_ACTIONS = {"execute_context_sql", "execute_data_query"}
 
 
 def _strip_json_fence(raw_response: str) -> str:
@@ -79,6 +71,64 @@ def parse_model_step(raw_response: str) -> ModelStep:
         action_input=action_input,
         raw_response=raw_response,
     )
+
+
+def _try_parse_python_output_as_table(output: str) -> AnswerTable | None:
+    """execute_python の stdout から表形式データを厳格に推測して AnswerTable に変換する。
+
+    誤検出（自由テキストの print 出力を CSV と誤認）を避けるため、
+    以下の条件すべてを満たす場合のみ採用する:
+      - 全行が同じ列数
+      - 列名はすべて短い識別子 (英数字+_, 32文字以内, 空白なし)
+      - データ行が 1-200 行の範囲
+      - 自然文を示唆するキー文字 (':', '?', '"') を列名に含まない
+    """
+    import csv
+    import io
+    import re
+
+    text = output.strip()
+    if not text:
+        return None
+    lines = [l for l in text.splitlines() if l.strip()]
+    if len(lines) < 2 or len(lines) > 250:
+        return None
+
+    # ヘッダー行に明確な CSV ヘッダーらしい識別子があるかチェック
+    header_line = lines[0].strip()
+    if "," not in header_line and "\t" not in header_line:
+        # 単一列ヘッダー扱いは曖昧なので、列名が短い識別子の場合のみ許す
+        if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]{0,31}", header_line):
+            return None
+
+    try:
+        reader = csv.reader(io.StringIO(text))
+        all_rows = list(reader)
+    except Exception:
+        return None
+    if len(all_rows) < 2:
+        return None
+
+    columns = [str(c).strip() for c in all_rows[0]]
+    if not columns or any(not c for c in columns):
+        return None
+    # 列名チェック: 短い識別子のみ許可
+    ident_re = re.compile(r"^[A-Za-z_][A-Za-z0-9_\-\(\) ]{0,63}$")
+    for c in columns:
+        if len(c) > 64 or not ident_re.match(c):
+            return None
+        if any(bad in c for bad in (":", "?", '"', "/", "\\", "[", "]", "{", "}")):
+            return None
+
+    rows: list[list[str]] = []
+    for r in all_rows[1:]:
+        if len(r) != len(columns):
+            return None  # 列数が揃わない時点で正常な CSV ではない
+        rows.append([str(v).strip() for v in r])
+    if not rows or len(rows) > 200:
+        return None
+
+    return AnswerTable(columns=columns, rows=rows)
 
 
 def _build_error_observation(exc: Exception, raw_response: str) -> dict[str, object]:
@@ -133,227 +183,6 @@ def _build_tool_error_observation(model_step: ModelStep, exc: Exception) -> dict
     }
 
 
-def _latest_question_contract(steps: list[StepRecord]) -> dict[str, object] | None:
-    """直近の question_contract を返す。"""
-
-    for step in reversed(steps):
-        if step.action != "question_contract":
-            continue
-        content = step.observation.get("content")
-        if not isinstance(content, dict):
-            continue
-        contract = content.get("contract")
-        if isinstance(contract, dict):
-            return contract
-    return None
-
-
-def _latest_validation_candidate(steps: list[StepRecord]) -> dict[str, object] | None:
-    """直近の validate_answer 入力から提出候補を返す。"""
-
-    for step in reversed(steps):
-        if step.action != "validate_answer" or not step.ok:
-            continue
-        columns = step.action_input.get("columns")
-        rows = step.action_input.get("rows")
-        if isinstance(columns, list) and columns and isinstance(rows, list):
-            return {"columns": columns, "rows": rows}
-    return None
-
-
-def _latest_query_candidate(steps: list[StepRecord]) -> dict[str, object] | None:
-    """直近の成功 query 結果から提出候補を返す。"""
-
-    for step in reversed(steps):
-        if step.action not in QUERY_ACTIONS or not step.ok:
-            continue
-        content = step.observation.get("content")
-        if not isinstance(content, dict):
-            continue
-        columns = content.get("columns")
-        rows = content.get("rows")
-        if isinstance(columns, list) and columns and isinstance(rows, list) and rows:
-            return {"columns": columns, "rows": rows[:1000]}
-    return None
-
-
-def _build_near_step_limit_observation(
-    *,
-    step_index: int,
-    max_steps: int,
-    candidate: dict[str, object],
-) -> dict[str, object]:
-    """残り step が少ないときに提出優先を促す observation を作る。"""
-
-    return {
-        "ok": False,
-        "tool": NEAR_STEP_LIMIT_ACTION,
-        "content": {
-            "reason": "The task is near the max_steps limit. Missing submissions score zero.",
-            "remaining_model_steps_after_this": max_steps - step_index,
-            "candidate_columns": candidate.get("columns"),
-            "candidate_row_count": len(candidate.get("rows", []))
-            if isinstance(candidate.get("rows"), list)
-            else None,
-            "candidate_preview_rows": candidate.get("rows", [])[:SUMMARY_PREVIEW_ROWS]
-            if isinstance(candidate.get("rows"), list)
-            else [],
-            "repair_instruction": (
-                "Stop exploring. Use the best candidate table already found. "
-                "If the candidate has not been validated, call validate_answer now with these columns and rows. "
-                "If it has been validated, call answer now. Remove only clearly helper columns when the requested "
-                "output attributes are obvious; otherwise submit the candidate rather than leaving the task unanswered."
-            ),
-        },
-    }
-
-
-def _copy_action_input_with_contract(
-    action: str,
-    action_input: dict[str, object],
-    steps: list[StepRecord],
-) -> dict[str, object]:
-    """validate_answer に直近 question_contract を内部注入する。"""
-
-    if action != "validate_answer":
-        return action_input
-    contract = _latest_question_contract(steps)
-    if contract is None:
-        return action_input
-    augmented = dict(action_input)
-    augmented["_question_contract"] = contract
-    return augmented
-
-
-def _short_json(value: object, *, max_chars: int = 500) -> str:
-    """summary 用に JSON 値を短く整形する。"""
-
-    rendered = json.dumps(value, ensure_ascii=False, default=str)
-    if len(rendered) <= max_chars:
-        return rendered
-    return rendered[:max_chars] + "... [truncated]"
-
-
-def _content_summary(step: StepRecord) -> str:
-    """古い step の observation から再利用すべき事実を短く抽出する。"""
-
-    content = step.observation.get("content")
-    if not isinstance(content, dict):
-        return ""
-
-    if step.action == "question_contract":
-        contract = content.get("contract")
-        if isinstance(contract, dict):
-            focused = {
-                key: contract.get(key)
-                for key in (
-                    "requested_output_attributes",
-                    "metric_or_formula",
-                    "grain",
-                    "grouping",
-                    "ranking",
-                    "tie_rule",
-                    "join_keys",
-                    "helper_attributes",
-                    "ambiguities_checked",
-                )
-            }
-            warnings = content.get("warnings")
-            return f", contract={_short_json(focused)}, warnings={_short_json(warnings, max_chars=240)}"
-
-    if step.action in {"execute_context_sql", "execute_data_query"}:
-        focused = {
-            "columns": content.get("columns"),
-            "row_count": content.get("row_count"),
-            "truncated": content.get("truncated"),
-            "preview_rows": content.get("rows", [])[:SUMMARY_PREVIEW_ROWS]
-            if isinstance(content.get("rows"), list)
-            else [],
-        }
-        return f", result={_short_json(focused)}"
-
-    if step.action in {"read_csv", "read_json", "inspect_sqlite_schema"}:
-        focused = {
-            key: content.get(key)
-            for key in ("path", "columns", "row_count", "top_level_type", "top_level_keys", "tables")
-            if key in content
-        }
-        if focused:
-            return f", profile={_short_json(focused, max_chars=500)}"
-
-    if step.action == "validate_answer":
-        focused = {
-            "column_count": content.get("column_count"),
-            "row_count": content.get("row_count"),
-            "warnings": content.get("warnings"),
-        }
-        return f", validation={_short_json(focused, max_chars=650)}"
-
-    return ""
-
-
-def _execute_tool_step(
-    *,
-    tools: ToolRegistry,
-    task: PublicTask,
-    model_step: ModelStep,
-    step_index: int,
-    action_input: dict[str, object],
-) -> tuple[StepRecord, ToolExecutionResult]:
-    """tool を実行し、StepRecord と ToolExecutionResult を返す。"""
-
-    tool_result = tools.execute(task, model_step.action, action_input)
-    observation = {
-        "ok": tool_result.ok,
-        "tool": model_step.action,
-        "content": tool_result.content,
-    }
-    step_record = StepRecord(
-        step_index=step_index,
-        thought=model_step.thought,
-        action=model_step.action,
-        action_input=action_input,
-        raw_response=model_step.raw_response,
-        observation=observation,
-        ok=tool_result.ok,
-    )
-    return step_record, tool_result
-
-
-def _build_auto_answer_step(
-    *,
-    tools: ToolRegistry,
-    task: PublicTask,
-    model_step: ModelStep,
-    step_index: int,
-    action_input: dict[str, object],
-) -> tuple[StepRecord, ToolExecutionResult]:
-    """step 上限付近で候補 table を answer として自動提出する。"""
-
-    tool_result = tools.execute(task, "answer", action_input)
-    observation = {
-        "ok": tool_result.ok,
-        "tool": "answer",
-        "content": tool_result.content
-        | {
-            "auto_submitted": True,
-            "auto_submit_reason": "near max_steps; submitting the best available candidate to avoid a missing prediction",
-        },
-    }
-    return (
-        StepRecord(
-            step_index=step_index,
-            thought=model_step.thought,
-            action="answer",
-            action_input=action_input,
-            raw_response=model_step.raw_response,
-            observation=observation,
-            ok=tool_result.ok,
-        ),
-        tool_result,
-    )
-
-
 def _build_step_summary(step: StepRecord) -> str:
     if step.action == "__error__":
         failed_action = step.observation.get("failed_action")
@@ -368,10 +197,7 @@ def _build_step_summary(step: StepRecord) -> str:
         )
     tool_name = str(step.observation.get("tool", step.action))
     ok_flag = "ok" if step.ok else "fail"
-    return (
-        f"- step {step.step_index}: action={step.action}, tool={tool_name}, "
-        f"status={ok_flag}{_content_summary(step)}"
-    )
+    return f"- step {step.step_index}: action={step.action}, tool={tool_name}, status={ok_flag}"
 
 
 class ReActAgent:
@@ -387,6 +213,73 @@ class ReActAgent:
         self.tools = tools
         self.config = config or ReActAgentConfig()
         self.system_prompt = system_prompt or REACT_SYSTEM_PROMPT
+
+    @staticmethod
+    def _salvage_answer(state: AgentRuntimeState) -> AnswerTable | None:
+        """ステップ上限到達時、直近の validate_answer または execute_python 出力から回答を救済する。"""
+        # 1) validate_answer の候補を優先
+        for step in reversed(state.steps):
+            if step.action != "validate_answer":
+                continue
+            action_input = step.action_input
+            columns = action_input.get("columns")
+            rows = action_input.get("rows")
+            if (
+                isinstance(columns, list)
+                and columns
+                and all(isinstance(c, str) for c in columns)
+                and isinstance(rows, list)
+                and rows
+            ):
+                return AnswerTable(columns=list(columns), rows=[list(r) for r in rows])
+        # 2) execute_python の出力から表形式データを推測
+        for step in reversed(state.steps):
+            if step.action != "execute_python" or not step.ok:
+                continue
+            output = str(step.observation.get("content", {}).get("output", ""))
+            if not output.strip():
+                continue
+            answer = _try_parse_python_output_as_table(output)
+            if answer is not None:
+                return answer
+        # 3) 最終手段: 直近の成功した execute_python 出力から単一数値を抽出
+        import re
+        for step in reversed(state.steps):
+            if step.action != "execute_python" or not step.ok:
+                continue
+            output = str(step.observation.get("content", {}).get("output", ""))
+            if not output.strip():
+                continue
+            # "答え: 42" や "Result: 3.14" や最終行の数値
+            lines = [l.strip() for l in output.strip().splitlines() if l.strip()]
+            for line in reversed(lines):
+                # "Answer: 42" / "Result: 3.14%" / "count: 7" パターン
+                m = re.search(r"(?:answer|result|count|total|percentage|ratio)[:\s=]+([+-]?\d+\.?\d*)", line, re.IGNORECASE)
+                if m:
+                    return AnswerTable(columns=["answer"], rows=[[m.group(1)]])
+            # 最終行が数値のみの場合
+            last_line = lines[-1] if lines else ""
+            m = re.fullmatch(r"([+-]?\d+\.?\d*%?)", last_line.strip())
+            if m:
+                val = m.group(1).rstrip("%")
+                return AnswerTable(columns=["answer"], rows=[[val]])
+        return None
+
+    @staticmethod
+    def _detect_tool_loop(state: AgentRuntimeState) -> str | None:
+        """直近4ステップで同じツールが3回以上呼ばれたらループ検知メッセージを返す。"""
+        recent = state.steps[-4:]
+        if len(recent) < 3:
+            return None
+        actions = [s.action for s in recent if s.action != "__error__"]
+        if len(actions) < 3:
+            return None
+        from collections import Counter
+        counts = Counter(actions)
+        for action, count in counts.items():
+            if count >= 3:
+                return action
+        return None
 
     def _build_messages(self, task: PublicTask, state: AgentRuntimeState) -> list[ModelMessage]:
         system_content = build_system_prompt(
@@ -417,8 +310,82 @@ class ReActAgent:
 
     def run(self, task: PublicTask) -> AgentRunResult:
         state = AgentRuntimeState()
-        for step_index in range(1, self.config.max_steps + 1):
-            raw_response = self.model.complete(self._build_messages(task, state))
+        max_steps = self.config.max_steps
+        for step_index in range(1, max_steps + 1):
+            messages = self._build_messages(task, state)
+            remaining = max_steps - step_index
+
+            # --- ループ検知: 同じツール3回以上連続 ---
+            looped_tool = self._detect_tool_loop(state)
+            if looped_tool and remaining > 2:
+                if looped_tool in ("retrieve_context", "read_doc", "read_json", "read_csv"):
+                    messages.append(ModelMessage(
+                        role="user",
+                        content=(
+                            f"LOOP DETECTED: You called `{looped_tool}` 3+ times recently. "
+                            "Stop reading files repeatedly. Switch to `execute_python` to load "
+                            "and process all data at once, then compute the answer. "
+                            "If you already have enough data, call `validate_answer` now."
+                        ),
+                    ))
+                elif looped_tool == "execute_python":
+                    messages.append(ModelMessage(
+                        role="user",
+                        content=(
+                            "LOOP DETECTED: You called `execute_python` 3+ times recently. "
+                            "Your current approach is not working. Either:\n"
+                            "1. Simplify your code and try a different parsing strategy, OR\n"
+                            "2. Call `validate_answer` with your best available result now."
+                        ),
+                    ))
+                elif looped_tool == "execute_context_sql":
+                    messages.append(ModelMessage(
+                        role="user",
+                        content=(
+                            "LOOP DETECTED: You called `execute_context_sql` 3+ times recently. "
+                            "Switch to `execute_python` for more flexible data processing, "
+                            "or call `validate_answer` with your best available result."
+                        ),
+                    ))
+                else:
+                    messages.append(ModelMessage(
+                        role="user",
+                        content=(
+                            f"LOOP DETECTED: You called `{looped_tool}` 3+ times recently. "
+                            "Change your approach. Try a different tool or submit your answer."
+                        ),
+                    ))
+
+            if remaining <= 1:
+                messages.append(ModelMessage(
+                    role="user",
+                    content=(
+                        f"URGENT: This is step {step_index}/{max_steps}. "
+                        "You have NO more steps after this. "
+                        "Call `answer` NOW with your best available data. "
+                        "If you have validated data, use that. "
+                        "If you have any numeric result from execute_python, wrap it as a table. "
+                        "If you have nothing, submit a single-cell table with your best guess."
+                    ),
+                ))
+            elif remaining <= 2:
+                messages.append(ModelMessage(
+                    role="user",
+                    content=(
+                        f"WARNING: Step {step_index}/{max_steps} — only {remaining} steps left. "
+                        "Call `validate_answer` NOW with whatever result you have, "
+                        "then call `answer` on the next step."
+                    ),
+                ))
+            elif remaining <= 4:
+                messages.append(ModelMessage(
+                    role="user",
+                    content=(
+                        f"NOTICE: Step {step_index}/{max_steps} — {remaining} steps remaining. "
+                        "Start wrapping up. If you have computed any result, call `validate_answer` soon."
+                    ),
+                ))
+            raw_response = self.model.complete(messages)
             try:
                 model_step = parse_model_step(raw_response)
             except Exception as exc:
@@ -437,128 +404,22 @@ class ReActAgent:
                 continue
 
             try:
-                if step_index >= self.config.max_steps - 1 and model_step.action not in {
-                    "answer",
-                    "validate_answer",
-                }:
-                    validated_candidate = _latest_validation_candidate(state.steps)
-                    if validated_candidate is not None:
-                        step_record, tool_result = _build_auto_answer_step(
-                            tools=self.tools,
-                            task=task,
-                            model_step=model_step,
-                            step_index=step_index,
-                            action_input=validated_candidate,
-                        )
-                        state.steps.append(step_record)
-                        if tool_result.is_terminal:
-                            state.answer = tool_result.answer
-                            break
-
-                    query_candidate = _latest_query_candidate(state.steps)
-                    if query_candidate is not None:
-                        if step_index >= self.config.max_steps:
-                            step_record, tool_result = _build_auto_answer_step(
-                                tools=self.tools,
-                                task=task,
-                                model_step=model_step,
-                                step_index=step_index,
-                                action_input=query_candidate,
-                            )
-                            state.steps.append(step_record)
-                            if tool_result.is_terminal:
-                                state.answer = tool_result.answer
-                                break
-                        state.steps.append(
-                            StepRecord(
-                                step_index=step_index,
-                                thought=model_step.thought,
-                                action=NEAR_STEP_LIMIT_ACTION,
-                                action_input=model_step.action_input,
-                                raw_response=raw_response,
-                                observation=_build_near_step_limit_observation(
-                                    step_index=step_index,
-                                    max_steps=self.config.max_steps,
-                                    candidate=query_candidate,
-                                ),
-                                ok=False,
-                            )
-                        )
-                        continue
-
-                if model_step.action == "answer":
-                    projected_answer = project_helper_columns_from_answer(
-                        steps=state.steps,
-                        action_input=model_step.action_input,
-                    )
-                    if projected_answer is not None:
-                        step_record, tool_result = _build_auto_answer_step(
-                            tools=self.tools,
-                            task=task,
-                            model_step=model_step,
-                            step_index=step_index,
-                            action_input=projected_answer,
-                        )
-                        step_record.observation["content"]["auto_submit_reason"] = (
-                            "projected helper columns after validate_answer warning"
-                        )
-                        state.steps.append(step_record)
-                        if tool_result.is_terminal:
-                            state.answer = tool_result.answer
-                            break
-
-                    repair_observation = build_answer_repair_observation(
-                        steps=state.steps,
-                        action_input=model_step.action_input,
-                        step_index=step_index,
-                        max_steps=self.config.max_steps,
-                    )
-                    if repair_observation is not None:
-                        state.steps.append(
-                            StepRecord(
-                                step_index=step_index,
-                                thought=model_step.thought,
-                                action=REPAIR_ACTION,
-                                action_input=model_step.action_input,
-                                raw_response=raw_response,
-                                observation=repair_observation,
-                                ok=False,
-                            )
-                        )
-                        continue
-
-                action_input = _copy_action_input_with_contract(
-                    model_step.action,
-                    model_step.action_input,
-                    state.steps,
-                )
-                step_record, tool_result = _execute_tool_step(
-                    tools=self.tools,
-                    task=task,
-                    model_step=model_step,
+                tool_result = self.tools.execute(task, model_step.action, model_step.action_input)
+                observation = {
+                    "ok": tool_result.ok,
+                    "tool": model_step.action,
+                    "content": tool_result.content,
+                }
+                step_record = StepRecord(
                     step_index=step_index,
-                    action_input=action_input,
+                    thought=model_step.thought,
+                    action=model_step.action,
+                    action_input=model_step.action_input,
+                    raw_response=raw_response,
+                    observation=observation,
+                    ok=tool_result.ok,
                 )
                 state.steps.append(step_record)
-                if (
-                    model_step.action == "validate_answer"
-                    and step_index >= self.config.max_steps
-                    and tool_result.ok
-                ):
-                    auto_step, auto_result = _build_auto_answer_step(
-                        tools=self.tools,
-                        task=task,
-                        model_step=model_step,
-                        step_index=step_index + 1,
-                        action_input={
-                            "columns": action_input.get("columns"),
-                            "rows": action_input.get("rows"),
-                        },
-                    )
-                    state.steps.append(auto_step)
-                    if auto_result.is_terminal:
-                        state.answer = auto_result.answer
-                        break
                 if tool_result.is_terminal:
                     state.answer = tool_result.answer
                     break
@@ -577,7 +438,13 @@ class ReActAgent:
                 )
 
         if state.answer is None and state.failure_reason is None:
-            state.failure_reason = "Agent did not submit an answer within max_steps."
+            # ステップ上限到達時、最後の validate_answer 候補があれば強制回答
+            salvaged = self._salvage_answer(state)
+            if salvaged is not None:
+                state.answer = salvaged
+                state.failure_reason = None
+            else:
+                state.failure_reason = "Agent did not submit an answer within max_steps."
 
         return AgentRunResult(
             task_id=task.task_id,

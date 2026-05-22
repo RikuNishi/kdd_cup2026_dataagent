@@ -223,7 +223,6 @@ baseline はモデルに次のツールを公開します。ツールに渡す�
 | --- | --- |
 | `profile_context` | 難易度、質問、存在ファイル、CSV header、JSON shape、SQLite schema、文書見出しなどをまとめて返します。`context/knowledge.md` は除外します。 |
 | `plan_knowledge` | `profile_context` 後に、参照データ情報とあわせて `knowledge.md` の全文を返し、用語、閾値、ルール確認に使います。 |
-| `question_contract` | `plan_knowledge` 後に、requested output、filter、formula、grain、join key、helper attribute、曖昧語確認などの質問解釈を trace に固定します。 |
 | `retrieve_context` | `knowledge.md` や `doc/*.md` から、質問に関連する文書 chunk を返します。 |
 | `list_context` | `context/` 配下のファイルとディレクトリを一覧表示します。 |
 | `read_csv` | CSV の preview を読み込みます。 |
@@ -242,7 +241,6 @@ baseline はモデルに次のツールを公開します。ツールに渡す�
 | --- | --- |
 | `src/data_agent_baseline/benchmark/dataset.py` | 公開 dataset loader |
 | `src/data_agent_baseline/tools/context_profile.py` | `profile_context`, `plan_knowledge`, `retrieve_context` |
-| `src/data_agent_baseline/tools/question_contract.py` | `question_contract` |
 | `src/data_agent_baseline/tools/data_query.py` | `execute_data_query` |
 | `src/data_agent_baseline/tools/filesystem.py` | `list_context`, `read_csv`, `read_json`, `read_doc` |
 | `src/data_agent_baseline/tools/python_exec.py` | `execute_python` |
@@ -394,9 +392,6 @@ vllm serve <model_path> \
 
 | 日付 | 内容 |
 | --- | --- |
-| 2026-05-17 | ReAct loop に `near_step_limit_submit` を追加し、step 上限直前は追加探索より既存 query / validate 候補の提出を優先するよう変更。`validate_answer` が直近 `question_contract` を内部参照し、requested output と answer columns の差分を warning できるようにした。 |
-| 2026-05-17 | `question_contract` 擬似 tool を追加し、ReAct 前半で requested output、formula、grain、join key、helper attribute を宣言する workflow に変更。`validate_answer` の notes に formula/grain/join/tie/knowledge 根拠の warning を追加し、古い step summary に query 結果と contract 要約を残すように改善。 |
-| 2026-05-17 | ReAct prompt に question contract、曖昧語チェック、空結果クエリ反復抑制の指示を追加し、`validate_answer` の warning/recommendation を余分列・結合名・空回答の修正誘導寄りに強化。answer 実行前に helper 属性 warning を 1 回だけ repair する `answer_repair` を追加し、ローカル設定の `max_workers` を 2 へ調整。 |
 | 2026-05-16 | A-board 57 問、B-board 324 問の難易度分布と評価環境の `max_workers=6` を前提に、提出用の難易度別 timeout を `extreme=90`、`easy=180`、`medium=360`、`hard=900` 秒へ調整。 |
 | 2026-05-16 | `easy` / `medium` / `hard` / `extreme` ごとに `max_steps`、`max_retries`、`task_timeout_seconds` を override できる設定を追加。 |
 | 2026-05-05 | `inspect_sqlite_schema` が DB table の schema だけでなく row count と preview rows も返すようにし、prompt で DB 実データ確認を明示。 |

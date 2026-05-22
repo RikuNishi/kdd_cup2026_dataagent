@@ -14,8 +14,16 @@ from typing import Any
 from data_agent_baseline.agents.model import OpenAIModelAdapter
 from data_agent_baseline.agents.react import ReActAgent, ReActAgentConfig
 from data_agent_baseline.benchmark.dataset import DABenchPublicDataset
+from data_agent_baseline.benchmark.schema import PublicTask
 from data_agent_baseline.config import AppConfig, resolve_runtime_config
 from data_agent_baseline.tools.registry import ToolRegistry, create_default_tool_registry
+
+_DIFFICULTY_ORDER = {"easy": 0, "medium": 1, "hard": 2, "extreme": 3}
+
+
+def _sort_tasks_by_difficulty(tasks: list[PublicTask]) -> list[PublicTask]:
+    """簡単なタスクを先に実行するためにソートする。"""
+    return sorted(tasks, key=lambda t: _DIFFICULTY_ORDER.get(t.difficulty.lower(), 99))
 
 
 @dataclass(frozen=True, slots=True)
@@ -259,10 +267,47 @@ def run_single_task(
     tools: ToolRegistry | None = None,
 ) -> TaskRunArtifacts:
     started_at = perf_counter()
-    if model is None and tools is None:
-        run_result = _run_single_task_with_timeout(task_id=task_id, config=config)
-    else:
-        run_result = _run_single_task_core(task_id=task_id, config=config, model=model, tools=tools)
+    # run-task (単一タスク) では直接実行してログを表示する
+    run_result = _run_single_task_core(task_id=task_id, config=config, model=model, tools=tools)
+    run_result["e2e_elapsed_seconds"] = round(perf_counter() - started_at, 3)
+    return _write_task_outputs(task_id, run_output_dir, run_result)
+
+
+def _run_benchmark_task_with_timeout(
+    *,
+    task_id: str,
+    config: AppConfig,
+    run_output_dir: Path,
+) -> TaskRunArtifacts:
+    """run-benchmark の並列実行用: 直接実行（Windows spawn overhead 回避）。
+
+    Hard/Extreme タスクで回答なしの場合、タイムアウト内でリトライする。
+    """
+    started_at = perf_counter()
+    try:
+        run_result = _run_single_task_core(task_id=task_id, config=config)
+    except Exception as exc:
+        run_result = {
+            "task_id": task_id,
+            "answer": None,
+            "steps": [],
+            "failure_reason": f"Unhandled exception: {exc!r}",
+        }
+
+    # Hard/Extreme でリトライ: 回答なしかつタイムバジェットが残っている場合
+    difficulty = run_result.get("runtime_config", {}).get("difficulty", "")
+    timeout = run_result.get("runtime_config", {}).get("task_timeout_seconds", 0)
+    if difficulty in ("hard", "extreme") and not run_result.get("answer") and timeout > 0:
+        elapsed_so_far = perf_counter() - started_at
+        if elapsed_so_far < timeout * 0.6:
+            try:
+                retry_result = _run_single_task_core(task_id=task_id, config=config)
+                if retry_result.get("answer"):
+                    run_result = retry_result
+                    run_result["retried"] = True
+            except Exception:
+                pass
+
     run_result["e2e_elapsed_seconds"] = round(perf_counter() - started_at, 3)
     return _write_task_outputs(task_id, run_output_dir, run_result)
 
@@ -276,13 +321,42 @@ def run_submit_task(
     model=None,
     tools: ToolRegistry | None = None,
 ) -> TaskRunArtifacts:
-    """提出用 I/O 形式で 1 タスクを実行し、prediction と trace を分けて保存する。"""
+    """提出用 I/O 形式で 1 タスクを実行し、prediction と trace を分けて保存する。
+
+    Hard/Extreme タスクで回答なしの場合、タイムバジェット内でリトライする。
+    """
 
     started_at = perf_counter()
-    if model is None and tools is None:
-        run_result = _run_single_task_with_timeout(task_id=task_id, config=config)
-    else:
-        run_result = _run_single_task_core(task_id=task_id, config=config, model=model, tools=tools)
+    try:
+        if model is None and tools is None:
+            run_result = _run_single_task_with_timeout(task_id=task_id, config=config)
+        else:
+            run_result = _run_single_task_core(task_id=task_id, config=config, model=model, tools=tools)
+    except Exception as exc:
+        run_result = {
+            "task_id": task_id,
+            "answer": None,
+            "steps": [],
+            "failure_reason": f"Unhandled exception: {exc!r}",
+        }
+
+    # Hard/Extreme でリトライ: 回答なしかつタイムバジェットが残っている場合
+    difficulty = run_result.get("runtime_config", {}).get("difficulty", "")
+    timeout = run_result.get("runtime_config", {}).get("task_timeout_seconds", 0)
+    if difficulty in ("hard", "extreme") and not run_result.get("answer") and timeout > 0:
+        elapsed_so_far = perf_counter() - started_at
+        if elapsed_so_far < timeout * 0.6:
+            try:
+                if model is None and tools is None:
+                    retry_result = _run_single_task_with_timeout(task_id=task_id, config=config)
+                else:
+                    retry_result = _run_single_task_core(task_id=task_id, config=config, model=model, tools=tools)
+                if retry_result.get("answer"):
+                    run_result = retry_result
+                    run_result["retried"] = True
+            except Exception:
+                pass
+
     run_result["e2e_elapsed_seconds"] = round(perf_counter() - started_at, 3)
     return _write_submit_task_outputs(task_id, output_dir, logs_dir, run_result)
 
@@ -301,6 +375,7 @@ def run_benchmark(
     tasks = dataset.iter_tasks()
     if limit is not None:
         tasks = tasks[:limit]
+    tasks = _sort_tasks_by_difficulty(tasks)
 
     effective_workers = config.run.max_workers
     if effective_workers < 1:
@@ -330,7 +405,7 @@ def run_benchmark(
         with ThreadPoolExecutor(max_workers=effective_workers) as executor:
             future_to_index = {
                 executor.submit(
-                    run_single_task,
+                    _run_benchmark_task_with_timeout,
                     task_id=task_id,
                     config=config,
                     run_output_dir=run_output_dir,
@@ -377,6 +452,7 @@ def run_submit_benchmark(
     tasks = dataset.iter_tasks()
     if limit is not None:
         tasks = tasks[:limit]
+    tasks = _sort_tasks_by_difficulty(tasks)
 
     effective_workers = config.run.max_workers
     if effective_workers < 1:
