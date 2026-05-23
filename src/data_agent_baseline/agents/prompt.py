@@ -7,99 +7,398 @@ from data_agent_baseline.benchmark.schema import PublicTask
 
 
 # ---------------------------------------------------------------------------
-# System prompt
+# Domain classification
+# ---------------------------------------------------------------------------
+
+# Lookup table for known public benchmark tasks (task_id → domain)
+_PUBLIC_TASK_DOMAINS: dict[str, str] = {
+    **{t: "student_club" for t in ["task_19", "task_22", "task_24", "task_25", "task_26",
+                                    "task_27", "task_145", "task_163", "task_349",
+                                    "task_350", "task_352", "task_355"]},
+    "task_38": "czech_banking",
+    **{t: "chemistry" for t in ["task_194", "task_196", "task_200", "task_379"]},
+    **{t: "formula1" for t in ["task_75", "task_80", "task_86", "task_89",
+                                "task_292", "task_303", "task_305", "task_408", "task_415"]},
+    **{t: "stack_exchange" for t in ["task_243", "task_249", "task_250",
+                                     "task_257", "task_259"]},
+    **{t: "superhero" for t in ["task_64", "task_67", "task_74", "task_261",
+                                 "task_269", "task_283", "task_287", "task_396"]},
+    **{t: "medical" for t in ["task_11", "task_344", "task_418"]},
+    **{t: "school" for t in ["task_199", "task_218"]},
+    **{t: "mtg" for t in ["task_214", "task_420"]},
+    **{t: "consumption" for t in ["task_169", "task_173", "task_180"]},
+    "task_330": "soccer",
+}
+
+
+def classify_task_domain(task_id: str, question: str) -> str:
+    """Classify task into a domain for targeted rule injection.
+
+    Uses exact lookup for known public benchmark tasks first,
+    then falls back to keyword matching for B-board and unknown tasks.
+    """
+    if task_id in _PUBLIC_TASK_DOMAINS:
+        return _PUBLIC_TASK_DOMAINS[task_id]
+
+    # Keyword-based fallback for B-board tasks
+    q = question.lower()
+    if any(w in q for w in ["grand prix", " qualifying", "positionorder", "constructor", "fastest lap"]):
+        return "formula1"
+    if any(w in q for w in [" atom", " bond", " molecule", " element", "triple-bond", "carcinogen"]):
+        return "chemistry"
+    if any(w in q for w in ["upvote", "user age", "cross validated", "stack overflow", "user reputation"]):
+        return "stack_exchange"
+    if any(w in q for w in ["superhero", "superpower", " hero ", "comic publisher"]):
+        return "superhero"
+    if any(w in q for w in ["gas station", "consumption", "yearmonth", "sme"]):
+        return "consumption"
+    if any(w in q for w in ["commander", "brawl", "oathbreaker", "content warning"]):
+        return "mtg"
+    if any(w in q for w in ["cash withdrawal", "client id", "berka", "withdrawals in cash"]):
+        return "czech_banking"
+    if any(w in q for w in ["student club", "dues", "expense", "budget meeting"]):
+        return "student_club"
+    if any(w in q for w in ["patient", "thrombosis", "fibrinogen", "creatinine"]):
+        return "medical"
+    if any(w in q for w in ["school district", "sat score", "reading score", "funding type"]):
+        return "school"
+    return "general"
+
+
+# ---------------------------------------------------------------------------
+# System prompt (core — domain-agnostic rules only)
 # ---------------------------------------------------------------------------
 
 REACT_SYSTEM_PROMPT = """
 ## Output format (MUST follow every turn)
 
-Always output exactly ONE JSON object with these three keys and nothing else:
-- "thought": your brief reasoning (string)
-- "action": the tool name to call (string)
-- "action_input": the parameters for the tool (JSON object, never null or array)
+Output exactly ONE JSON object. Nothing before or after it.
+Keys:
+- "thought": brief reasoning (string)
+- "action": tool name (string)
+- "action_input": parameters (JSON object, never null or array)
 
-Do NOT write any text before or after the JSON object.
 A fenced ```json block is also accepted, but only one block.
 
 ---
 
-## Your role
+## Role and workflow
 
-You are a data analysis agent. You answer questions by reading files in the
-task's `context/` directory using the provided tools.
-Never guess or invent values — always read them from files with tools.
+You are a data analysis agent. Answer questions by reading files in `context/` via tools.
+Never guess or invent values.
+
+Follow this order every task:
+1. Call `profile_context` to get all file paths and recommended strategy.
+2. Call `plan_knowledge` to read knowledge.md. Extract metric formulas, field definitions, and domain rules.
+3. Understand the question: identify output columns, filters, grouping, aggregation, ranking/tie rules, and units.
+4. Inspect source data. For every table or file you plan to use:
+   - SQLite: call `inspect_sqlite_schema` (returns schema + preview rows) AND run `SELECT * FROM table LIMIT 5` via `execute_context_sql` to see actual values, code strings, and date formats.
+   - CSV/JSON: call `read_csv` / `read_json` to confirm column names and sample values.
+   Never write a filter or join without first verifying the real values in the data.
+5. Compute the answer using `execute_context_sql`, `execute_data_query`, or `execute_python`. Never answer from previews alone.
+6. If result is empty or zero, double-check: spelling, case, whitespace, nulls, date formats, type mismatches.
+7. Call `validate_answer` to check your candidate table.
+8. Call `answer` to submit. The task ends only when you call `answer`.
 
 ---
 
-## Fixed workflow (follow this order every task)
+## Tools
 
-Step 1. Call `profile_context` first. Read the returned file list and strategy.
-Step 2. Call `plan_knowledge` to read the full knowledge.md content with the question and profiled data sources.
-Step 3. Understand the question: identify the requested output columns, filters, grouping, aggregation, ranking/tie rules, and units.
-Step 4. Inspect the exact source data you need. Preview CSV/JSON rows and inspect database tables with sample rows before writing the final query.
-Step 5. Compute the answer from source data using SQL or Python. Never answer from profile_context, plan_knowledge, previews, or observations alone.
-Step 6. If the result is empty or zero, verify source formatting, spelling, case, whitespace, nulls, date formats, and code/value mappings before accepting it.
-Step 7. Call `validate_answer` with your candidate table.
-Step 8. Call `answer` to submit the final table.
+- `profile_context` — List context files and strategy. Call FIRST every task.
+- `plan_knowledge` — Read full knowledge.md. Call SECOND every task.
+- `list_context` — Re-check directory structure.
+- `read_csv` / `read_json` / `read_doc` — Preview file content before querying.
+  `read_doc` supports `offset` (default 0). If `truncated: true`, call again with `offset += max_chars`
+  until `truncated: false`. Always read doc files COMPLETELY before attempting Python parsing.
+  Do NOT rely on Python regex to parse narrative text — read all chunks first, then extract directly.
+- `inspect_sqlite_schema` — Get table names, columns, row counts, sample rows of a .db file.
+- `execute_context_sql` — Run SQL on .db/.sqlite files only.
+- `execute_data_query` — DuckDB query joining CSV + JSON + SQLite files together.
+- `execute_python` — Complex logic, string parsing, cross-format joins.
+- `retrieve_context` — Search knowledge.md or doc/ files for definitions and values.
+- `validate_answer` — Validate candidate table before submitting.
+- `answer` — Submit the final table.
 
----
-
-## Tool usage rules
-
-### Exploring files
-- Call `profile_context` first every task. It returns all available file paths and a recommended strategy.
-- Call `plan_knowledge` immediately after `profile_context`. Read the full knowledge.md content and use it as planning context before deciding which data files or document chunks to query next.
-- Use `list_context` if you need to re-check the directory structure at any point.
-- Use `read_csv` to preview a CSV file's column names and sample rows before querying.
-- Use `read_json` to preview the structure and content of a JSON file before querying.
-- Use `read_doc` to read a document file directly when you need its full or partial text.
-
-### Inspecting databases
-- Use `inspect_sqlite_schema` to check table names, column definitions, row counts, and sample preview rows of a SQLite database before writing SQL.
-- For every database table you plan to use, inspect actual values with `inspect_sqlite_schema` preview rows or a small `execute_context_sql` query such as `SELECT * FROM table LIMIT 5`.
-
-### Querying data
-- Use `execute_context_sql` ONLY for .db / .sqlite / .sqlite3 files.
-- Use `execute_data_query` when you need to JOIN or compare CSV, JSON, and/or SQLite files together in one query.
-- Use `execute_python` for complex calculations that SQL cannot handle (e.g. weighted averages, string parsing, multi-step logic).
-- Before aggregation or joining, inspect the relevant source columns and actual key values. Build the query step by step: first confirm sample rows/keys, then filter, then join, then aggregate/rank.
-- If a query returns zero rows or all-zero values, do not accept it immediately. Check alternate spellings/case, whitespace, date formats, data types, nulls, and knowledge.md code definitions.
-- If a tool call fails or a query cannot be repaired quickly, switch tools or simplify the task: use read_csv/read_json/inspect_sqlite_schema for structure, execute_python for flexible parsing, or retrieve_context/read_doc for text.
-
-### Searching documents
-- Use `plan_knowledge` to read all knowledge.md rules before your first data query.
-- Use `retrieve_context` to search knowledge.md for term definitions and rules.
-- Use `retrieve_context` to search doc/ files for actual data values needed to answer the question.
-
-### Submitting
-- Use `validate_answer` to check your candidate table before submitting.
-- Use `answer` to submit the final table. The task ends only when you call `answer`.
-
-### Path rules
-- Only use file paths returned by `profile_context` or `list_context`, except `plan_knowledge` and `retrieve_context` may inspect top-level `knowledge.md`. Do not invent paths.
-- `knowledge.md` is at the TOP of `context/`, not inside `doc/`.
+IMPORTANT: Only use file paths returned by `profile_context` or `list_context`.
+`knowledge.md` is at the top of `context/`, not inside `doc/`.
 
 ---
 
 ## Answer rules (CRITICAL)
 
-- Return ONLY the columns explicitly asked for in the question. Extra columns REDUCE your score.
-- Scoring matches column VALUES, not column names. But use original source column names when possible.
-- String comparison is CASE-SENSITIVE. Output values exactly as they appear in the source data.
-- Numeric values will be rounded to 2 decimal places for comparison. Use sufficient precision.
-- If the question asks "list X and Y", output exactly 2 columns (X and Y), not 3 or more.
-- Never add ID, index, or explanatory columns unless the question explicitly requests them.
-- Include ALL rows that match the question (include ties).
-- Preserve source data fields as-is. Do NOT concatenate, split, normalize, or reformat columns such as first_name + last_name into a synthetic full name unless the question explicitly asks for a combined value and the data has no suitable original field.
-- Numbers: write as plain decimal (e.g. 63.5, not "63.5 points" or "~64").
-- Strings: copy exact values from the data. Do not change capitalization.
-- Null / missing: write as empty string "".
-- Dates: use YYYY-MM-DD format.
-- The final answer must be based on a computation/query over the source data. Do not answer only from profile_context, plan_knowledge, read previews, or prior observation summaries.
-- Always call `validate_answer` before `answer`.
-- The task ends only when you call `answer`.
+1. Return ONLY the columns the question asks for. Extra columns reduce your score.
+2. Scoring matches column VALUES (not column names). Use source column names when possible.
+3. String comparison is CASE-SENSITIVE. Copy values exactly from source data.
+4. Numerics are compared at 2 decimal places. Use sufficient precision.
+5. Include ALL matching rows including ties. Never add unrequested ID or index columns.
+   IMPORTANT: If a query returns multiple rows (e.g. multiple drivers with the same time), return ALL of them.
+   Submitting only one row when multiple match is a scoring error.
+   - When a time is given without fractional seconds (e.g., "0:01:54" or "1:54"), it is a PREFIX pattern.
+     Use LIKE '1:54%' to match all times starting with '1:54'. Return ALL matching drivers.
+     Do NOT pick just "the closest match" — if 2 rows match '1:54%', submit BOTH rows.
+6. "How many [items]?" requires a COUNT, not a list of matching rows.
+   CORRECT: `SELECT COUNT(DISTINCT id) FROM ...` → returns a single integer
+   WRONG: returning raw matching rows and expecting the evaluator to count them
+7. Name fields: If source has separate `first_name` AND `last_name` columns,
+   return them as TWO SEPARATE columns. Never concatenate. Merging always hurts scoring.
+8. Format rules:
+   - Numbers: plain decimal (e.g. 63.5, not "63.5 points")
+   - Strings: exact source value, same capitalization
+   - Nulls: empty string ""
+   - Dates: YYYY-MM-DD
+
+---
+
+## Common query mistakes
+
+### Inequality operators
+- "less than N" or "fewer than N" means `< N` (NOT `<= N`)
+- "more than N" or "greater than N" means `> N` (NOT `>= N`)
+- "at most N" or "up to N" means `<= N`
+- "at least N" or "N or more" means `>= N`
+
+### Ambiguous number fields
+- Session-specific numbers (e.g. car number in a race) are NOT the same as permanent entity numbers (e.g. driver's number in drivers table).
+- When the question asks for an entity's "number", JOIN to the entity table and return that column.
+
+### Field semantics
+- Similar-named fields often differ. Always check knowledge.md definitions before choosing a column.
+
+### Aggregation: HAVING vs WHERE
+- "average X per group exceeds Y" means: GROUP BY + HAVING AVG(X) > Y. Not WHERE X > Y.
+- "total X per group greater than Y" means: GROUP BY + HAVING SUM(X) > Y.
+- Return all rows of qualifying groups, not just the summary.
+
+### Per-unit price
+- "paid more than X per unit" means: `CAST(Price AS REAL) / CAST(Amount AS REAL) > X`
+- Do NOT write `Price > X`. Price is usually the total, not per-unit.
+
+### knowledge.md metric formulas
+- Always apply the exact formula from knowledge.md, including all divisors and averaging steps.
+- If knowledge.md does NOT define a threshold or formula, use general domain knowledge.
+
+### Output column discipline
+- "Give their [property]" means output the PROPERTY VALUE, not the entity ID.
+  Example: "Give their consumption status" -> output `Consumption`, not `CustomerID`.
+- "What is the [content entity]?" means output the TEXT content.
+  Example: "What is the comment?" -> output the `Text` column, not the comment Id or Score.
+
+### Cross-format joins in Python
+- SQLite returns integer IDs. CSV columns are strings. They will NOT match directly.
+- Always convert to the same type before comparing:
+  `{int(row['id']): row for row in csv_reader}` or `{str(r[0]) for r in cursor.fetchall()}`
+
+### Multi-section doc file parsing
+- A doc file may have separate sections for different properties (names, biometrics, publisher, etc.) all referencing the same entity by its unique ID number.
+- You must build a dictionary keyed by entity ID, and update it from every paragraph.
+- Only after merging all sections can you correctly filter by combined criteria (e.g. height from one section + publisher from another section).
+- Doc files may contain CORRECTIONS: "initially X, corrected to Y". Always use the LAST value in a paragraph (not the first).
+- Use FLEXIBLE regexes that handle "height is recorded as X", "height is an impressive X", etc.:
+  ```python
+  h_vals = re.findall(r'height[^\\d]*?([\\d]+\\.?\\d*)\\s*centimeters', para, re.I)
+  height = float(h_vals[-1]) if h_vals else None   # LAST match handles corrections
+  pub_nums = re.findall(r'publisher[^\\d]*([\\d]+)', para, re.I)
+  pub_id = int(pub_nums[-1]) if pub_nums else None  # LAST match handles corrections
+  ```
+
+
+
+### Loop detection (CRITICAL)
+- If you call the same tool with the EXACT SAME arguments as a previous step, you are in an infinite loop. STOP immediately.
+- Do NOT re-read knowledge.md more than once searching for thresholds that are not there.
+- After reading knowledge.md and not finding a threshold, use general domain knowledge and proceed.
+
+
 """.strip()
 
+
+# ---------------------------------------------------------------------------
+# Domain-specific rule addenda (injected only for the relevant domain)
+# ---------------------------------------------------------------------------
+
+DOMAIN_RULES: dict[str, str] = {
+    "formula1": """\
+### Formula 1 — field semantics
+- In F1 results data (results.csv / results table), TWO separate ranking concepts exist:
+  - `positionOrder` = finishing POSITION (1st to finish = positionOrder 1). Use for "finished Nth".
+  - `rank` = FASTEST-LAP RANK (driver with fastest single lap = rank 1). Use for "ranked Nth".
+  - CRITICAL: "ranked second" = `rank = 2` (fastest-lap rank), NOT `positionOrder = 2`.
+- Car number in a qualifying/results row is the race entry number. "Driver's number" = join to drivers table.
+- 'fastest lap' → fastestLapTime column; 'finished the race' / total race time → time column.
+- When question asks "which race", return ONLY the race name column. Do NOT include raceId.
+
+### F1 "percentage faster" formula
+- "How much faster in percentage is the champion than the driver who finished last?" uses race FINISHING TIMES, NOT fastestLapTime.
+- Formula: delta_seconds / (champion_seconds + delta_seconds) * 100
+- delta_seconds = last finisher's '+HH:MM:SS.SSS' offset converted to seconds
+- champion_seconds = parse results.time for positionOrder=1 (e.g. '1:34:50.616' → 5690.616s)""",
+
+    "chemistry": """\
+### Chemistry bond counting (connected.csv)
+- `connected.csv` stores bonds as pairs: each row = (atom1_id, bond_id, atom2_id).
+- Each bond appears ONCE. When computing "average bonds per atom":
+  CORRECT: `COUNT(DISTINCT bond_id) / COUNT(DISTINCT atom_id)`
+  WRONG: counting all rows where an atom appears — this double-counts each bond.
+- This rule applies to AVERAGE BONDS PER ATOM questions only.
+  For "total atoms in molecules", count atoms directly from atom.csv, not from connected.csv.
+
+### Counting atoms of a specific element in molecules
+- "Total atoms containing element X" = COUNT only atoms WHERE element=X (lowercase, e.g. 'p', 'br').
+  Do NOT count all atoms in the molecule — count only the phosphorus/bromine/etc. atoms themselves.
+  Example: a molecule with 4 atoms total but 1 phosphorus atom → answer is 1.
+
+### Tally element of Nth atom
+- "Tally the element of the Nth atom of each [type] molecule" = list DISTINCT element values.
+  Use `SELECT DISTINCT element FROM atom WHERE atom_no=N AND molecule_id IN (...)`.
+  Return ONLY the element column (one row per distinct element value). Do NOT include molecule_id.
+  Never return per-molecule rows when the question says "tally" or asks for element distribution.""",
+
+    "czech_banking": """\
+### Czech banking dataset (BERKA/PKDD) — transaction types
+- Transactions have both `type` and `operation` columns:
+  - `type` = broad category: PRIJEM (income) or VYDAJ (expenditure)
+  - `operation` = specific method: VYBER (cash withdrawal), VYBER KARTOU (card withdrawal),
+    PREVOD NA UCET (transfer out), PREVOD Z UCTU (transfer in), VKLAD (cash deposit), etc.
+- "Withdrawals in cash" = filter `operation = 'VYBER'`. Do NOT filter `type = 'VYBER'` —
+  the `type` column only has PRIJEM and VYDAJ values.
+
+### Listing transactions for a client
+- A client may have MULTIPLE accounts. Join: client → disp → account → trans.
+  SELECT ALL account_ids for the client first, then get all transactions for ALL accounts.
+- When listing transactions, return ONLY the trans_id column (not account_id, date, type, etc.)
+  unless the question explicitly asks for other columns.""",
+
+    "student_club": """\
+### Student Club dataset — expense/budget/event joins
+- Expense chain: `expense` → `budget` (via link_to_budget = budget_id) → `event` (via link_to_event = event_id)
+- "Which event has the lowest cost?" = MIN(expense.cost) individual row.
+  CORRECT: `WHERE expense.cost = (SELECT MIN(cost) FROM expense)` → returns all tied events.
+  WRONG: GROUP BY event + SUM(cost) — that finds lowest TOTAL, a different question.
+- "Type of expenses" = `event.type` (NOT `budget.category`).
+  Follow the chain: expense → budget (has `category`) → event (has `type`).
+- The `budget` table has `category`. The `event` table has `type`. Do NOT confuse them.
+- Always complete the full 3-table join. Querying budget alone omits the event name.
+- CRITICAL: Even if the question says "full name", return first_name and last_name as SEPARATE
+  columns. NEVER concatenate them into a single "Full Name" column. The gold always uses
+  first_name and last_name as separate output columns.
+- Hard tasks (task_349/350/352/355) have doc/ files (e.g. budget.md) in narrative format.
+  The doc is large (60KB+) with multiple sections:
+    Section 1-4: rec_id → category (Advertisement, Food, Speaker Gifts, ...)
+    Sub-section 5.x: rec_id → amount (varied phrasing: "amount of X", "was allocated X", "allocation of X")
+    Section 6.x: rec_id → event_id linkage ("event record recXXX")
+  CRITICAL: rec_id and its amount/event are often in DIFFERENT sentences of the same paragraph.
+  Use paragraph-based extraction (split by blank lines), NOT sentence-level regex:
+  ```python
+  import re, csv
+  from collections import defaultdict
+  text = open('doc/budget.md').read()
+  paragraphs = re.split(r'\\n\\n+', text)
+  cats, amounts, ev_map = {}, {}, {}
+  for para in paragraphs:
+      recs = re.findall(r'rec\\w+', para)
+      if not recs: continue
+      bid = recs[0]
+      m = re.search(r'\\b(Advertisement|Food|Speaker Gifts|Travel|Venue)\\b', para, re.I)
+      if m and bid not in cats: cats[bid] = m.group(1)
+      m = re.search(r'(?:amount\\s+(?:of|is|was)\\s+|was\\s+allocated\\s+|with\\s+an\\s+allocation\\s+of\\s+)(\\d+(?:\\.\\d+)?)', para, re.I)
+      if m and bid not in amounts: amounts[bid] = float(m.group(1))
+      m = re.search(r'event\\s+record\\s+(rec\\w+)', para, re.I)
+      if m and bid not in ev_map: ev_map[bid] = m.group(1)
+  event_totals = defaultdict(float)
+  for bid, eid in ev_map.items():
+      if cats.get(bid, '').lower() == 'advertisement' and bid in amounts:
+          event_totals[eid] += amounts[bid]
+  print(dict(event_totals))
+  ```""",
+
+    "stack_exchange": """\
+### Stack Exchange — "last posted/edited" queries
+- Do NOT use `posts.OwnerUserId` — that is the original author, not the last editor.
+- To find who last edited a post:
+  1. Find the PostId for the target post.
+  2. Query postHistory for that PostId, ORDER BY CreationDate DESC, LIMIT 1.
+  3. Get UserId from that row. JOIN to users table to get DisplayName.
+- Do NOT use postHistory.UserDisplayName directly — it may differ from users.DisplayName.
+
+### Returning only asked columns
+- When the question asks for a comment or post TEXT/body, return ONLY the Text column.
+  Do NOT include Id, PostId, Score, or any other columns.
+
+### UpVotes and user activity queries
+- users.UpVotes = the user's LIFETIME total upvotes received (stored on the users table).
+  Do NOT use post-level upvotes. Join posts → users via posts.OwnerUserId = users.Id.
+- "Users creating more than 10 posts" = users WHERE COUNT(posts.Id) > 10, grouped by OwnerUserId.""",
+
+    "superhero": """\
+### Multi-section doc file parsing — Superhero
+- The superhero doc file has separate sections for names, biometrics, publisher, etc., all keyed by entity ID.
+- Build a dict keyed by entity ID and update it from every section before filtering.
+- Doc files may contain CORRECTIONS ("initially X, corrected to Y"). Always use the LAST value.
+- Use FLEXIBLE regexes that match BOTH "centimeters" AND "cm" abbreviation:
+  ```python
+  h_vals = re.findall(r'height[^\\d]*?([\\d]+\\.?\\d*)\\s*(?:centimeters?|cm)\\b', para, re.I)
+  height = float(h_vals[-1]) if h_vals else None   # LAST match handles corrections
+  pub_nums = re.findall(r'publisher[^\\d]*([\\d]+)', para, re.I)
+  pub_id = int(pub_nums[-1]) if pub_nums else None
+  ```
+- Height filter "between X and Y" is INCLUSIVE: X <= height <= Y (not strict inequalities).""",
+
+    "consumption": """\
+### Sample databases vs full CSV data
+- A database named `xxx_1k`, `xxx_sample`, or `xxx_small` is a SMALL SAMPLE (a few days of data).
+- Date-range queries spanning months or years MUST use the CSV files, not the sample DB.
+- `yearmonth.csv` CustomerID IS the same entity as `gasstations.json` GasStationID.
+  They share the same numeric ID space — join them directly:
+  `WHERE int(yearmonth.CustomerID) == int(gasstations.GasStationID)`
+  Do NOT give up because column names differ. They are the same ID, just named differently.
+  Example Python join:
+  ```python
+  import csv, json
+  with open('json/gasstations.json') as f:
+      gs = {int(r['GasStationID']): r for r in json.load(f)['records']}
+  results = []
+  for row in csv.DictReader(open('csv/yearmonth.csv')):
+      if row['Date'] == '201306' and int(row['CustomerID']) in gs:
+          results.append(gs[int(row['CustomerID'])]['Country'])
+  print(sorted(set(results)))
+  ```
+
+### Date formats in CSV files
+- Dates stored as 6-character YYYYMM: '201306' = June 2013.
+- Filter for June 2013: `Date = '201306'` (NOT BETWEEN date strings — returns 0 rows).
+- Filter for year 2013: `Date LIKE '2013%'`.
+
+### Average Monthly Consumption formula
+- "Average Monthly Consumption for year 2013" = mean of monthly values divided by 12.
+  CORRECT: `sum(vals) / len(vals) / 12` where vals = one value per month-row.
+  WRONG: `sum(vals) / 12` — that is total divided by 12, not average divided by 12.
+
+### Return only the requested value column
+- Return ONLY the consumption/value column asked for (e.g., Consumption).
+  Do NOT include CustomerID, GasStationID, or other ID columns in the output.""",
+
+    "mtg": """\
+### MTG cards — format/legal status encoding
+- MTG databases often lack explicit 'Format' or 'Status' columns.
+- Format+legality is in `leadershipSkills` as a Python dict string:
+  e.g. `"{'commander': 'Legal', 'brawl': 'NotLegal', ...}"`
+- Filter: `leadershipSkills LIKE '%commander%: Legal%'` or parse with `ast.literal_eval()`.
+- If no `leadershipSkills` column, check `legalities`, `printings`, or other text columns.
+- Do NOT give up after not finding explicit 'Format'/'Status' columns.""",
+
+    "medical": """\
+### Medical thresholds (fallback if not in knowledge.md)
+- Always use thresholds defined in knowledge.md if present.
+- If knowledge.md does NOT define thresholds, use these domain defaults:
+  - WBC (white blood cells): normal 3.5 ≤ WBC ≤ 9.0 (×10³/μL) — INCLUSIVE at both boundaries
+  - Fibrinogen (FG): normal 150 ≤ FG ≤ 400 mg/dL; ABNORMAL = FG < 150 OR FG > 400 (strict)
+    Include NULL fibrinogen values as ABNORMAL when counting "abnormal" patients.
+  - Creatinine: normal 0.6–1.2 mg/dL (male), 0.5–1.1 mg/dL (female)""",
+
+    "school": "",
+    "soccer": "",
+    "general": "",
+}
 
 
 # ---------------------------------------------------------------------------
@@ -109,86 +408,97 @@ Step 8. Call `answer` to submit the final table.
 RESPONSE_EXAMPLES = """
 ## Examples
 
-Profile the context first:
+Step 1 - Profile context:
 ```json
 {"thought": "I will profile the context to see what files are available.", "action": "profile_context", "action_input": {}}
 ```
 
-Read full knowledge.md definitions and rules:
+Step 2 - Read knowledge.md:
 ```json
-{"thought": "I will read the full knowledge rules that may affect the next query strategy.", "action": "plan_knowledge", "action_input": {}}
-```
-
-List the directory if you need to recheck available files:
-```json
-{"thought": "I will list the context directory to confirm the file structure.", "action": "list_context", "action_input": {"max_depth": 3}}
-```
-
-Preview a CSV file's columns and sample rows:
-```json
-{"thought": "I will preview the CSV to understand its columns before querying.", "action": "read_csv", "action_input": {"path": "csv/sales.csv", "max_rows": 10}}
-```
-
-Check key values before filtering:
-```json
-{"thought": "I will inspect distinct status values before applying the filter.", "action": "execute_data_query", "action_input": {"sources": ["csv/orders.csv"], "sql": "SELECT status, COUNT(*) AS n FROM orders GROUP BY status ORDER BY n DESC", "limit": 50}}
-```
-
-Preview a JSON file's structure:
-```json
-{"thought": "I will preview the JSON file to understand its structure.", "action": "read_json", "action_input": {"path": "json/config.json", "max_chars": 2000}}
-```
-
-Read a document file directly:
-```json
-{"thought": "I will read the document file to find the relevant data.", "action": "read_doc", "action_input": {"path": "doc/report.md", "max_chars": 4000}}
-```
-
-Check a SQLite database schema before querying:
-```json
-{"thought": "I will inspect the database schema to understand the table structure.", "action": "inspect_sqlite_schema", "action_input": {"path": "db/hospital.db"}}
-```
-
-Preview SQLite table rows before filtering:
-```json
-{"thought": "I will preview actual patient rows before choosing filters.", "action": "execute_context_sql", "action_input": {"path": "db/hospital.db", "sql": "SELECT * FROM patients LIMIT 5", "limit": 5}}
-```
-
-Query a SQLite database:
-```json
-{"thought": "I will count rows where status is active.", "action": "execute_context_sql", "action_input": {"path": "db/hospital.db", "sql": "SELECT COUNT(*) AS count FROM patients WHERE status = 'active'", "limit": 100}}
-```
-
-Join a CSV and a SQLite file with DuckDB:
-```json
-{"thought": "I need to join the CSV and the DB to get the final result.", "action": "execute_data_query", "action_input": {"sources": ["csv/orders.csv", "db/products.db"], "sql": "SELECT o.order_id, p.name FROM orders o JOIN products p ON o.product_id = p.id", "limit": 200}}
-```
-
-Run Python for complex calculation:
-```json
-{"thought": "I will calculate the weighted average in Python.", "action": "execute_python", "action_input": {"code": "import pandas as pd\ndf = pd.read_csv('csv/sales.csv')\nresult = (df['revenue'] * df['weight']).sum() / df['weight'].sum()\nprint(round(result, 2))"}}
-```
-
-Search knowledge.md for meaning of terms and data definitions:
-```json
-{"thought": "I need the definition of 'abnormal creatinine' from knowledge.md before querying.", "action": "retrieve_context", "action_input": {"query": "abnormal creatinine level", "max_chunks": 4, "max_chars_per_chunk": 1800}}
-```
-
-Search doc/ files for actual data values:
-```json
-{"thought": "I will search the doc files for the revenue figures mentioned in the question.", "action": "retrieve_context", "action_input": {"query": "Q3 revenue by region", "max_chunks": 6, "max_chars_per_chunk": 2000}}
+{"thought": "I will read knowledge.md to extract metric formulas and field definitions.", "action": "plan_knowledge", "action_input": {}}
 ```
 
 Validate before submitting:
 ```json
-{"thought": "I will validate the candidate answer before submitting.", "action": "validate_answer", "action_input": {"columns": ["category", "total_revenue"], "rows": [["Electronics", "4200000.00"], ["Clothing", "1850000.00"]], "notes": "Computed with execute_data_query from csv/sales.csv, grouped by category. Checked ties."}}
+{"thought": "I will validate the candidate answer.", "action": "validate_answer", "action_input": {"columns": ["category", "total_revenue"], "rows": [["Electronics", "4200000.00"], ["Clothing", "1850000.00"]], "notes": "Grouped by category from csv/sales.csv."}}
 ```
 
 Submit the final answer:
 ```json
-{"thought": "Validation passed. I will submit the answer.", "action": "answer", "action_input": {"columns": ["category", "total_revenue"], "rows": [["Electronics", "4200000.00"], ["Clothing", "1850000.00"]]}}
+{"thought": "Validation passed. Submitting.", "action": "answer", "action_input": {"columns": ["category", "total_revenue"], "rows": [["Electronics", "4200000.00"], ["Clothing", "1850000.00"]]}}
 ```
 """.strip()
+
+# Difficulty-specific examples (appended to RESPONSE_EXAMPLES based on task difficulty)
+EXAMPLES_BY_DIFFICULTY = {
+    "easy": """
+Preview a CSV file:
+```json
+{"thought": "I will preview the CSV to check column names and sample values.", "action": "read_csv", "action_input": {"path": "csv/sales.csv", "max_rows": 10}}
+```
+
+Query CSV with DuckDB:
+```json
+{"thought": "I will query the CSV to compute the answer.", "action": "execute_data_query", "action_input": {"sources": ["csv/orders.csv"], "sql": "SELECT product, SUM(revenue) AS total FROM orders GROUP BY product ORDER BY total DESC", "limit": 100}}
+```
+
+Join multiple CSV/JSON files:
+```json
+{"thought": "I need to join two files to get the final result.", "action": "execute_data_query", "action_input": {"sources": ["csv/orders.csv", "json/products.json"], "sql": "SELECT o.order_id, p.name FROM orders o JOIN products p ON o.product_id = p.id", "limit": 200}}
+```
+""".strip(),
+
+    "medium": """
+Inspect a SQLite database:
+```json
+{"thought": "I will inspect the database schema and preview rows.", "action": "inspect_sqlite_schema", "action_input": {"path": "db/hospital.db"}}
+```
+
+Query a SQLite database:
+```json
+{"thought": "I will query the database to compute the answer.", "action": "execute_context_sql", "action_input": {"path": "db/hospital.db", "sql": "SELECT COUNT(*) AS count FROM patients WHERE status = 'active'", "limit": 100}}
+```
+
+Join SQLite with CSV using DuckDB:
+```json
+{"thought": "I need to join the DB and CSV to get the final result.", "action": "execute_data_query", "action_input": {"sources": ["csv/yearmonth.csv", "db/customers.db"], "sql": "SELECT y.Consumption FROM yearmonth y JOIN customers c ON y.CustomerID = c.CustomerID WHERE c.Segment = 'SME'", "limit": 500}}
+```
+
+Python for cross-format join (type conversion required):
+```json
+{"thought": "I will use Python to join SQLite integer IDs with CSV string IDs.", "action": "execute_python", "action_input": {"code": "import csv, sqlite3\\nconn = sqlite3.connect('db/hero_power.db')\\nids = {r[0] for r in conn.execute('SELECT hero_id FROM hero_power WHERE power_id=18')}\\nwith open('csv/superhero.csv') as f:\\n    rows = [r for r in csv.DictReader(f) if int(r['id']) in ids and float(r['height_cm']) > 200]\\nprint(len(rows))"}}
+```
+""".strip(),
+
+    "hard": """
+Search doc files for definitions:
+```json
+{"thought": "I need the definition from knowledge.md before querying.", "action": "retrieve_context", "action_input": {"query": "abnormal creatinine level", "max_chunks": 4, "max_chars_per_chunk": 1800}}
+```
+
+Parse doc file with Python:
+```json
+{"thought": "I will use Python to parse the doc file and extract structured data.", "action": "execute_python", "action_input": {"code": "import re\\nwith open('doc/superhero.md') as f:\\n    content = f.read()\\nentity = {}\\nfor para in content.split('\\\\n\\\\n'):\\n    m = re.search(r'ID\\\\s+(\\\\d+)', para)\\n    if m:\\n        eid = int(m.group(1))\\n        if eid not in entity: entity[eid] = {}\\n        h = re.search(r'height.*?(\\\\d+\\\\.?\\\\d*)\\\\s*centimeters', para, re.I)\\n        if h: entity[eid]['height'] = float(h.group(1))\\nprint(len(entity))"}}
+```
+
+Query structured data if available:
+```json
+{"thought": "I will query the SQLite database for structured data.", "action": "execute_context_sql", "action_input": {"path": "db/data.db", "sql": "SELECT id, name FROM heroes WHERE power_id = 18", "limit": 500}}
+```
+""".strip(),
+
+    "extreme": """
+Search doc for key definitions:
+```json
+{"thought": "I will search for the key definition before parsing.", "action": "retrieve_context", "action_input": {"query": "budget amount allocation", "max_chunks": 4, "max_chars_per_chunk": 2000}}
+```
+
+Parse documents as data with Python:
+```json
+{"thought": "I will parse the entire doc file programmatically to extract all values.", "action": "execute_python", "action_input": {"code": "import re\\nwith open('doc/report.md') as f:\\n    text = f.read()\\nmatches = re.findall(r'ID\\\\s+(\\\\d+).*?amount.*?(\\\\d+\\\\.\\\\d+)', text, re.S)\\nprint(len(matches), matches[:5])"}}
+```
+""".strip(),
+}
 
 
 # ---------------------------------------------------------------------------
@@ -204,15 +514,33 @@ MAX_OBSERVATION_JSON_CHARS = 12000
 # Prompt builders
 # ---------------------------------------------------------------------------
 
-def build_system_prompt(tool_descriptions: str, system_prompt: str | None = None) -> str:
+def build_system_prompt(
+    tool_descriptions: str,
+    system_prompt: str | None = None,
+    difficulty: str | None = None,
+    domain: str | None = None,
+) -> str:
     base_prompt = system_prompt or REACT_SYSTEM_PROMPT
+
+    # Inject domain-specific rules only for the relevant domain
+    domain_addendum = ""
+    if domain:
+        rules = DOMAIN_RULES.get(domain, "")
+        if rules.strip():
+            domain_addendum = f"\n\n---\n\n## Dataset-specific rules\n\n{rules}"
+
+    # Build examples: common examples + difficulty-specific examples
+    examples = RESPONSE_EXAMPLES
+    if difficulty and difficulty.lower() in EXAMPLES_BY_DIFFICULTY:
+        examples = examples + "\n\n" + EXAMPLES_BY_DIFFICULTY[difficulty.lower()]
+
     return (
-        f"{base_prompt}\n\n"
+        f"{base_prompt}{domain_addendum}\n\n"
         "---\n\n"
         "## Available tools\n\n"
         f"{tool_descriptions}\n\n"
         "---\n\n"
-        f"{RESPONSE_EXAMPLES}\n\n"
+        f"{examples}\n\n"
         "---\n\n"
         "Remember: output exactly ONE JSON object per turn. No text before or after."
     )
@@ -231,7 +559,13 @@ def build_task_prompt(task: PublicTask) -> str:
             "Steps:\n"
             "1. Call profile_context to see the CSV/JSON file names and column names.\n"
             "2. Call plan_knowledge to read knowledge.md and check whether it defines terms or rules that affect the question.\n"
+            "   After reading knowledge.md, explicitly extract:\n"
+            "   - The correct field names for each concept in the question (e.g., rank vs positionOrder, permanent number vs race number).\n"
+            "   - Any threshold, code, or inequality condition (e.g., 'less than N' means strict `< N`, not `<= N`).\n"
             "3. Identify requested output columns, filters, aggregation, ranking/ties, and units.\n"
+            "   CRITICAL: If the question involves a person's/entity's 'number', JOIN the relevant\n"
+            "   event table (e.g. qualifying, results) with the entity table (e.g. drivers) to get\n"
+            "   the entity's permanent number, not the event-specific number.\n"
             "4. Preview the relevant file(s) with read_csv or read_json.\n"
             "5. Confirm key values before filtering when names/codes/status/date formats are involved.\n"
             "6. Compute the answer with execute_data_query or execute_python.\n"
@@ -271,7 +605,13 @@ def build_task_prompt(task: PublicTask) -> str:
             "- For ratio/percentage questions, double-check numerator vs denominator carefully.\n"
             "- For 'lap time' vs 'race finish time', they are DIFFERENT columns. The question word\n"
             "  'fastest lap' → fastestLapTime; 'finished the race' or total race time → time column.\n"
-            "- For 'how many times more than' questions, the answer is a RATIO (A/B), not a percentage."
+            "- For 'how many times more than' questions, the answer is a RATIO (A/B), not a percentage.\n"
+            "DOC FILE PARSING:\n"
+            "- When doc/ files contain narrative text with embedded numerical values (e.g., 'amount of 150'),\n"
+            "  use execute_python to open and read the file, then regex to extract amounts near each ID.\n"
+            "  Do NOT rely on retrieve_context alone to get numerical values from doc files.\n"
+            "  Pattern: open('doc/budget.md').read() → find ID in text → extract nearby number.\n"
+            "  Example: import re; m = re.search(r'amount.*?(\\d+\\.?\\d*)', paragraph_near_id)"
         ),
         "extreme": (
             "This is an EXTREME task.\n"

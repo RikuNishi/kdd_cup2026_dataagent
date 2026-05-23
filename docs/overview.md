@@ -12,6 +12,7 @@
 6. `ToolRegistry.execute()` が指定ツールを実行し、結果を observation として保存する。
 7. 通常は `profile_context -> plan_knowledge -> retrieve/query -> validate_answer -> answer` の順に進む。
 8. `answer` ツールが呼ばれるか、`max_steps` に到達するまで繰り返す。
+9. `max_steps` 以内に回答できなかった場合、`max_retries` 回まで最初からやり直す（リトライ）。最後のリトライでも回答できなければ `_salvage_answer()` で直前の出力から救済する。
 
 ## 現在の処理フロー
 
@@ -44,9 +45,11 @@ flowchart TD
     S --> T{answer?}
     T -->|いいえ| U{max_steps 到達?}
     U -->|いいえ| O
-    U -->|はい| V[failure_reason を設定]
+    U -->|はい| V{リトライ残あり?}
+    V -->|はい| N
+    V -->|いいえ| W2[salvage_answer / failure_reason]
     T -->|はい| W[AgentRunResult を返す]
-    V --> W
+    W2 --> W
 
     W --> X[trace.json を出力]
     X --> Y{answer あり?}
@@ -65,9 +68,10 @@ flowchart TD
 
 1. CLI が設定ファイルを読み込み、`run_single_task()` を呼び出す。
 2. 通常実行では `_run_single_task_with_timeout()` が子プロセスを起動し、タスク単位のタイムアウトを管理する。
+   - **タイムアウトは 1 アテンプトあたりの制限時間**。全体の制限 = `task_timeout_seconds × max_retries`。
 3. 子プロセス内で `_run_single_task_core()` が `DABenchPublicDataset` を作り、`task_id` に対応する `PublicTask` を取得する。
-4. `OpenAIModelAdapter` と標準 `ToolRegistry` を作り、`ReActAgent` に渡す。
-5. `ReActAgent.run()` がモデル応答とツール実行を繰り返し、`AgentRunResult` を返す。
+4. `OpenAIModelAdapter`（API リトライは `config.agent.max_retries`）と標準 `ToolRegistry` を作り、`ReActAgent` に渡す。
+5. `ReActAgent.run()` がエージェントリトライを含むモデル応答とツール実行を繰り返し、`AgentRunResult` を返す。
 6. 親プロセスが結果を受け取り、`e2e_elapsed_seconds` を追加する。
 7. `_write_task_outputs()` が `trace.json` を出力し、回答がある場合は `prediction.csv` も出力する。
 
@@ -87,9 +91,13 @@ flowchart TD
 
 テスト用に `model` または `tools` を外から渡した場合は、共有インスタンスを使うため並列数は 1 に固定されます。
 
+**注意**: ベンチマーク実行はサブプロセスタイムアウトを使いません。リトライは `ReActAgent.run()` 内部で処理されます。
+
 ### ReAct ループ内部
 
-`ReActAgent.run()` の 1 ステップは次の順序で進みます。
+`ReActAgent.run()` は **アテンプトループ（最大 `max_retries` 回）× ステップループ（最大 `max_steps` 回）** の二重構造です。
+
+各ステップは次の順序で進みます。
 
 1. `build_system_prompt()` で基本ルール、ツール説明、応答例をまとめる。
 2. `build_task_prompt()` で質問文を user message にする。
@@ -98,10 +106,22 @@ flowchart TD
 5. `parse_model_step()` で JSON fenced block を読み取り、`action` と `action_input` を得る。
 6. `tools.execute()` で該当ツールを実行する。
 7. ツール結果を observation として `StepRecord` に保存する。
-8. `answer` ツールなら `state.answer` をセットして終了する。
+8. `answer` ツールなら `state.answer` をセットして全ループを終了する。
 9. 例外が出た場合は `__error__` ステップとして記録し、次のステップに進む。
 
-`max_steps` 以内に `answer` が呼ばれなかった場合は、`failure_reason` に `"Agent did not submit an answer within max_steps."` が入ります。
+**ステップ上限到達時の挙動（`max_steps` 内に `answer` が呼ばれなかった場合）:**
+
+- **リトライ残あり**（非最終アテンプト）: `__restart__` ステップを trace に追記し、新しい `AgentRuntimeState` でループを再開。直前のアテンプトの履歴は引き継がない。
+- **最終アテンプト**: `_salvage_answer()` で直前の SQL/Python/validate_answer 出力から回答を救済する。救済できなければ `failure_reason = "Agent did not submit an answer within max_steps."` を設定。
+
+**ステップ末尾プロンプト:**
+
+| 残りステップ | アテンプト | 挿入メッセージ |
+|---|---|---|
+| `remaining <= 4` | 任意 | NOTICE: 残りステップ数を通知 |
+| `remaining <= 2` | 任意 | WARNING: `validate_answer` を今すぐ呼ぶよう警告 |
+| `remaining <= 1` | 非最終 | URGENT: 回答できなければリスタートすることを通知 |
+| `remaining <= 1` | 最終 | URGENT: これ以上ステップもリトライもないことを明示、強制回答要求 |
 
 ### v2 の solver 方針
 
@@ -145,7 +165,7 @@ v2 は agent loop 自体を大きく分岐させず、モデルに公開する�
 
 ReAct の実行ループを担当する中心モジュールです。
 
-- `ReActAgentConfig`: 最大ステップ数などの実行設定。
+- `ReActAgentConfig`: `max_steps`（1アテンプトの最大ステップ数）と `max_retries`（エージェントループ全体のリトライ回数）を持つ実行設定。
 - `_strip_json_fence()`: fenced block から JSON 本体を取り出す。
 - `_load_single_json_object()`: 応答が単一 JSON オブジェクトだけであることを確認する。
 - `parse_model_step()`: モデル応答を `ModelStep` に変換する。

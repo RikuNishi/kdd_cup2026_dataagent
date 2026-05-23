@@ -87,13 +87,16 @@ def read_json_preview(task: PublicTask, relative_path: str, *, max_chars: int = 
     }
 
 
-def read_doc_preview(task: PublicTask, relative_path: str, *, max_chars: int = 4000) -> dict[str, object]:
-    """テキスト系ドキュメントの先頭プレビューを返す。"""
+def read_doc_preview(task: PublicTask, relative_path: str, *, max_chars: int = 4000, offset: int = 0) -> dict[str, object]:
+    """テキスト系ドキュメントのプレビューを返す。offset で読み開始位置を指定できる。"""
 
     path = resolve_context_path(task, relative_path)
     text = path.read_text(errors="replace")
+    chunk = text[offset:offset + max_chars]
     return {
         "path": relative_path,
-        "preview": text[:max_chars],
-        "truncated": len(text) > max_chars,
+        "offset": offset,
+        "total_chars": len(text),
+        "preview": chunk,
+        "truncated": (offset + max_chars) < len(text),
     }

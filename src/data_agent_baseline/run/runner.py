@@ -87,12 +87,12 @@ def _write_json(path: Path, payload: dict[str, Any]) -> None:
     """JSON ファイルを UTF-8 で整形して書き出す。"""
 
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
 def _write_csv(path: Path, columns: list[str], rows: list[list[Any]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", newline="") as handle:
+    with path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.writer(handle)
         writer.writerow(columns)
         for row in rows:
@@ -121,9 +121,9 @@ def _run_single_task_core(
     runtime_config = resolve_runtime_config(config, task.difficulty)
 
     agent = ReActAgent(
-        model=model or build_model_adapter(config, max_retries=runtime_config.max_retries),
+        model=model or build_model_adapter(config),  # APIリトライは config.agent.max_retries を使用
         tools=tools or create_default_tool_registry(),
-        config=ReActAgentConfig(max_steps=runtime_config.max_steps),
+        config=ReActAgentConfig(max_steps=runtime_config.max_steps, max_retries=runtime_config.max_retries),
     )
     run_result = agent.run(task)
     payload = run_result.to_dict()
@@ -161,13 +161,16 @@ def _run_single_task_with_timeout(*, task_id: str, config: AppConfig) -> dict[st
     if timeout_seconds <= 0:
         return _run_single_task_core(task_id=task_id, config=config)
 
+    # task_timeout_seconds は 1 アテンプトあたりの制限。全体 = per_attempt × max_retries
+    total_timeout = timeout_seconds * max(1, runtime_config.max_retries)
+
     queue: multiprocessing.Queue[Any] = multiprocessing.Queue()
     process = multiprocessing.Process(
         target=_run_single_task_in_subprocess,
         args=(task_id, config, queue),
     )
     process.start()
-    process.join(timeout_seconds)
+    process.join(total_timeout)
 
     if process.is_alive():
         process.terminate()
@@ -175,7 +178,11 @@ def _run_single_task_with_timeout(*, task_id: str, config: AppConfig) -> dict[st
         if process.is_alive():
             process.kill()
             process.join()
-        payload = _failure_run_result_payload(task_id, f"Task timed out after {timeout_seconds} seconds.")
+        payload = _failure_run_result_payload(
+            task_id,
+            f"Task timed out after {total_timeout} seconds "
+            f"({timeout_seconds}s × {runtime_config.max_retries} retries).",
+        )
         payload["runtime_config"] = {
             "difficulty": task.difficulty,
             "max_steps": runtime_config.max_steps,
@@ -281,7 +288,7 @@ def _run_benchmark_task_with_timeout(
 ) -> TaskRunArtifacts:
     """run-benchmark の並列実行用: 直接実行（Windows spawn overhead 回避）。
 
-    Hard/Extreme タスクで回答なしの場合、タイムアウト内でリトライする。
+    リトライはエージェント内部（ReActAgent.run）で max_retries 回行われる。
     """
     started_at = perf_counter()
     try:
@@ -293,20 +300,6 @@ def _run_benchmark_task_with_timeout(
             "steps": [],
             "failure_reason": f"Unhandled exception: {exc!r}",
         }
-
-    # Hard/Extreme でリトライ: 回答なしかつタイムバジェットが残っている場合
-    difficulty = run_result.get("runtime_config", {}).get("difficulty", "")
-    timeout = run_result.get("runtime_config", {}).get("task_timeout_seconds", 0)
-    if difficulty in ("hard", "extreme") and not run_result.get("answer") and timeout > 0:
-        elapsed_so_far = perf_counter() - started_at
-        if elapsed_so_far < timeout * 0.6:
-            try:
-                retry_result = _run_single_task_core(task_id=task_id, config=config)
-                if retry_result.get("answer"):
-                    run_result = retry_result
-                    run_result["retried"] = True
-            except Exception:
-                pass
 
     run_result["e2e_elapsed_seconds"] = round(perf_counter() - started_at, 3)
     return _write_task_outputs(task_id, run_output_dir, run_result)

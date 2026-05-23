@@ -109,7 +109,7 @@ def _load_difficulty_overrides(payload: dict) -> dict[str, DifficultyRuntimeOver
 def load_app_config(config_path: Path) -> AppConfig:
     """YAML 設定ファイルを読み込み、アプリ設定として返す。"""
 
-    payload = yaml.safe_load(config_path.read_text()) or {}
+    payload = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
     dataset_defaults = DatasetConfig()
     agent_defaults = AgentConfig()
     run_defaults = RunConfig()

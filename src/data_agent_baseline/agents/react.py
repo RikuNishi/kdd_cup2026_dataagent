@@ -10,6 +10,7 @@ from data_agent_baseline.agents.prompt import (
     build_observation_prompt,
     build_system_prompt,
     build_task_prompt,
+    classify_task_domain,
 )
 from data_agent_baseline.agents.runtime import AgentRunResult, AgentRuntimeState, StepRecord
 from data_agent_baseline.benchmark.schema import AnswerTable, PublicTask
@@ -19,6 +20,7 @@ from data_agent_baseline.tools.registry import ToolRegistry
 @dataclass(frozen=True, slots=True)
 class ReActAgentConfig:
     max_steps: int = 16
+    max_retries: int = 1  # エージェントループ全体のリトライ回数（1=リトライなし）
 
 
 INVALID_RESPONSE_ASSISTANT_MESSAGE = (
@@ -216,14 +218,22 @@ class ReActAgent:
 
     @staticmethod
     def _salvage_answer(state: AgentRuntimeState) -> AnswerTable | None:
-        """ステップ上限到達時、直近の validate_answer または execute_python 出力から回答を救済する。"""
+        """ステップ上限到達時、直近のステップ出力からハードコードで回答を救済する。
+
+        優先順位:
+          1. validate_answer の候補 (columns/rows が揃っている)
+          2. execute_context_sql / execute_data_query の結果 (columns/rows が揃っている)
+          3. execute_python の stdout から CSV 表形式を解析
+          4. execute_python の stdout から単一数値を抽出
+        """
+        import re
+
         # 1) validate_answer の候補を優先
         for step in reversed(state.steps):
             if step.action != "validate_answer":
                 continue
-            action_input = step.action_input
-            columns = action_input.get("columns")
-            rows = action_input.get("rows")
+            columns = step.action_input.get("columns")
+            rows = step.action_input.get("rows")
             if (
                 isinstance(columns, list)
                 and columns
@@ -232,7 +242,24 @@ class ReActAgent:
                 and rows
             ):
                 return AnswerTable(columns=list(columns), rows=[list(r) for r in rows])
-        # 2) execute_python の出力から表形式データを推測
+
+        # 2) execute_context_sql / execute_data_query の結果をそのまま使う
+        for step in reversed(state.steps):
+            if step.action not in ("execute_context_sql", "execute_data_query") or not step.ok:
+                continue
+            content = step.observation.get("content", {})
+            columns = content.get("columns")
+            rows = content.get("rows")
+            if (
+                isinstance(columns, list)
+                and columns
+                and all(isinstance(c, str) for c in columns)
+                and isinstance(rows, list)
+                and rows
+            ):
+                return AnswerTable(columns=list(columns), rows=[list(r) for r in rows])
+
+        # 3) execute_python の出力から表形式データを解析
         for step in reversed(state.steps):
             if step.action != "execute_python" or not step.ok:
                 continue
@@ -242,27 +269,25 @@ class ReActAgent:
             answer = _try_parse_python_output_as_table(output)
             if answer is not None:
                 return answer
-        # 3) 最終手段: 直近の成功した execute_python 出力から単一数値を抽出
-        import re
+
+        # 4) 最終手段: 直近の成功した execute_python 出力から単一数値を抽出
         for step in reversed(state.steps):
             if step.action != "execute_python" or not step.ok:
                 continue
             output = str(step.observation.get("content", {}).get("output", ""))
             if not output.strip():
                 continue
-            # "答え: 42" や "Result: 3.14" や最終行の数値
             lines = [l.strip() for l in output.strip().splitlines() if l.strip()]
             for line in reversed(lines):
-                # "Answer: 42" / "Result: 3.14%" / "count: 7" パターン
                 m = re.search(r"(?:answer|result|count|total|percentage|ratio)[:\s=]+([+-]?\d+\.?\d*)", line, re.IGNORECASE)
                 if m:
                     return AnswerTable(columns=["answer"], rows=[[m.group(1)]])
-            # 最終行が数値のみの場合
             last_line = lines[-1] if lines else ""
             m = re.fullmatch(r"([+-]?\d+\.?\d*%?)", last_line.strip())
             if m:
                 val = m.group(1).rstrip("%")
                 return AnswerTable(columns=["answer"], rows=[[val]])
+
         return None
 
     @staticmethod
@@ -282,9 +307,12 @@ class ReActAgent:
         return None
 
     def _build_messages(self, task: PublicTask, state: AgentRuntimeState) -> list[ModelMessage]:
+        domain = classify_task_domain(task.task_id, task.question)
         system_content = build_system_prompt(
             self.tools.describe_for_prompt(),
             system_prompt=self.system_prompt,
+            difficulty=task.difficulty,
+            domain=domain,
         )
         messages = [ModelMessage(role="system", content=system_content)]
         messages.append(ModelMessage(role="user", content=build_task_prompt(task)))
@@ -309,146 +337,196 @@ class ReActAgent:
         return messages
 
     def run(self, task: PublicTask) -> AgentRunResult:
-        state = AgentRuntimeState()
         max_steps = self.config.max_steps
-        for step_index in range(1, max_steps + 1):
-            messages = self._build_messages(task, state)
-            remaining = max_steps - step_index
+        max_retries = max(1, self.config.max_retries)  # 1以上を保証
+        all_steps: list[StepRecord] = []
 
-            # --- ループ検知: 同じツール3回以上連続 ---
-            looped_tool = self._detect_tool_loop(state)
-            if looped_tool and remaining > 2:
-                if looped_tool in ("retrieve_context", "read_doc", "read_json", "read_csv"):
+        for attempt in range(max_retries):
+            is_last_attempt = (attempt == max_retries - 1)
+            state = AgentRuntimeState()
+
+            for step_index in range(1, max_steps + 1):
+                messages = self._build_messages(task, state)
+                remaining = max_steps - step_index
+
+                # --- ループ検知: 同じツール3回以上連続 ---
+                looped_tool = self._detect_tool_loop(state)
+                if looped_tool and remaining > 2:
+                    if looped_tool in ("retrieve_context", "read_doc", "read_json", "read_csv"):
+                        messages.append(ModelMessage(
+                            role="user",
+                            content=(
+                                f"LOOP DETECTED: You called `{looped_tool}` 3+ times recently. "
+                                "Stop reading files repeatedly. Switch to `execute_python` to load "
+                                "and process all data at once, then compute the answer. "
+                                "If you already have enough data, call `validate_answer` now."
+                            ),
+                        ))
+                    elif looped_tool == "execute_python":
+                        messages.append(ModelMessage(
+                            role="user",
+                            content=(
+                                "LOOP DETECTED: You called `execute_python` 3+ times recently. "
+                                "Your current approach is not working. Either:\n"
+                                "1. Simplify your code and try a different parsing strategy, OR\n"
+                                "2. Call `validate_answer` with your best available result now."
+                            ),
+                        ))
+                    elif looped_tool == "execute_context_sql":
+                        messages.append(ModelMessage(
+                            role="user",
+                            content=(
+                                "LOOP DETECTED: You called `execute_context_sql` 3+ times recently. "
+                                "Switch to `execute_python` for more flexible data processing, "
+                                "or call `validate_answer` with your best available result."
+                            ),
+                        ))
+                    else:
+                        messages.append(ModelMessage(
+                            role="user",
+                            content=(
+                                f"LOOP DETECTED: You called `{looped_tool}` 3+ times recently. "
+                                "Change your approach. Try a different tool or submit your answer."
+                            ),
+                        ))
+
+                if remaining <= 1:
+                    if is_last_attempt:
+                        messages.append(ModelMessage(
+                            role="user",
+                            content=(
+                                f"URGENT: This is step {step_index}/{max_steps} — FINAL attempt "
+                                f"({attempt + 1}/{max_retries}). You have NO more steps or retries. "
+                                "Call `answer` NOW with your best available data. "
+                                "If you have validated data, use that. "
+                                "If you have any numeric result from execute_python, wrap it as a table. "
+                                "If you have nothing, submit a single-cell table with your best guess."
+                            ),
+                        ))
+                    else:
+                        messages.append(ModelMessage(
+                            role="user",
+                            content=(
+                                f"URGENT: This is step {step_index}/{max_steps} "
+                                f"(attempt {attempt + 1}/{max_retries}). "
+                                "Call `answer` NOW if you have a result. "
+                                "If you cannot answer, this attempt will restart from step 1 "
+                                f"({max_retries - attempt - 1} restart(s) remaining)."
+                            ),
+                        ))
+                elif remaining <= 2:
                     messages.append(ModelMessage(
                         role="user",
                         content=(
-                            f"LOOP DETECTED: You called `{looped_tool}` 3+ times recently. "
-                            "Stop reading files repeatedly. Switch to `execute_python` to load "
-                            "and process all data at once, then compute the answer. "
-                            "If you already have enough data, call `validate_answer` now."
+                            f"WARNING: Step {step_index}/{max_steps} — only {remaining} steps left. "
+                            "Call `validate_answer` NOW with whatever result you have, "
+                            "then call `answer` on the next step."
                         ),
                     ))
-                elif looped_tool == "execute_python":
+                elif remaining <= 4:
                     messages.append(ModelMessage(
                         role="user",
                         content=(
-                            "LOOP DETECTED: You called `execute_python` 3+ times recently. "
-                            "Your current approach is not working. Either:\n"
-                            "1. Simplify your code and try a different parsing strategy, OR\n"
-                            "2. Call `validate_answer` with your best available result now."
-                        ),
-                    ))
-                elif looped_tool == "execute_context_sql":
-                    messages.append(ModelMessage(
-                        role="user",
-                        content=(
-                            "LOOP DETECTED: You called `execute_context_sql` 3+ times recently. "
-                            "Switch to `execute_python` for more flexible data processing, "
-                            "or call `validate_answer` with your best available result."
-                        ),
-                    ))
-                else:
-                    messages.append(ModelMessage(
-                        role="user",
-                        content=(
-                            f"LOOP DETECTED: You called `{looped_tool}` 3+ times recently. "
-                            "Change your approach. Try a different tool or submit your answer."
+                            f"NOTICE: Step {step_index}/{max_steps} — {remaining} steps remaining. "
+                            "Start wrapping up. If you have computed any result, call `validate_answer` soon."
                         ),
                     ))
 
-            if remaining <= 1:
-                messages.append(ModelMessage(
-                    role="user",
-                    content=(
-                        f"URGENT: This is step {step_index}/{max_steps}. "
-                        "You have NO more steps after this. "
-                        "Call `answer` NOW with your best available data. "
-                        "If you have validated data, use that. "
-                        "If you have any numeric result from execute_python, wrap it as a table. "
-                        "If you have nothing, submit a single-cell table with your best guess."
-                    ),
-                ))
-            elif remaining <= 2:
-                messages.append(ModelMessage(
-                    role="user",
-                    content=(
-                        f"WARNING: Step {step_index}/{max_steps} — only {remaining} steps left. "
-                        "Call `validate_answer` NOW with whatever result you have, "
-                        "then call `answer` on the next step."
-                    ),
-                ))
-            elif remaining <= 4:
-                messages.append(ModelMessage(
-                    role="user",
-                    content=(
-                        f"NOTICE: Step {step_index}/{max_steps} — {remaining} steps remaining. "
-                        "Start wrapping up. If you have computed any result, call `validate_answer` soon."
-                    ),
-                ))
-            raw_response = self.model.complete(messages)
-            try:
-                model_step = parse_model_step(raw_response)
-            except Exception as exc:
-                observation = _build_error_observation(exc, raw_response)
-                state.steps.append(
-                    StepRecord(
-                        step_index=step_index,
-                        thought="",
-                        action="__error__",
-                        action_input={},
-                        raw_response=raw_response,
-                        observation=observation,
-                        ok=False,
+                raw_response = self.model.complete(messages)
+                try:
+                    model_step = parse_model_step(raw_response)
+                except Exception as exc:
+                    observation = _build_error_observation(exc, raw_response)
+                    state.steps.append(
+                        StepRecord(
+                            step_index=step_index,
+                            thought="",
+                            action="__error__",
+                            action_input={},
+                            raw_response=raw_response,
+                            observation=observation,
+                            ok=False,
+                        )
                     )
-                )
-                continue
+                    continue
 
-            try:
-                tool_result = self.tools.execute(task, model_step.action, model_step.action_input)
-                observation = {
-                    "ok": tool_result.ok,
-                    "tool": model_step.action,
-                    "content": tool_result.content,
-                }
-                step_record = StepRecord(
-                    step_index=step_index,
-                    thought=model_step.thought,
-                    action=model_step.action,
-                    action_input=model_step.action_input,
-                    raw_response=raw_response,
-                    observation=observation,
-                    ok=tool_result.ok,
-                )
-                state.steps.append(step_record)
-                if tool_result.is_terminal:
-                    state.answer = tool_result.answer
-                    break
-            except Exception as exc:
-                observation = _build_tool_error_observation(model_step, exc)
-                state.steps.append(
-                    StepRecord(
+                try:
+                    tool_result = self.tools.execute(task, model_step.action, model_step.action_input)
+                    observation = {
+                        "ok": tool_result.ok,
+                        "tool": model_step.action,
+                        "content": tool_result.content,
+                    }
+                    step_record = StepRecord(
                         step_index=step_index,
                         thought=model_step.thought,
-                        action="__error__",
+                        action=model_step.action,
                         action_input=model_step.action_input,
                         raw_response=raw_response,
                         observation=observation,
-                        ok=False,
+                        ok=tool_result.ok,
                     )
+                    state.steps.append(step_record)
+                    if tool_result.is_terminal:
+                        state.answer = tool_result.answer
+                        break
+                except Exception as exc:
+                    observation = _build_tool_error_observation(model_step, exc)
+                    state.steps.append(
+                        StepRecord(
+                            step_index=step_index,
+                            thought=model_step.thought,
+                            action="__error__",
+                            action_input=model_step.action_input,
+                            raw_response=raw_response,
+                            observation=observation,
+                            ok=False,
+                        )
+                    )
+
+            # アテンプト終了: このアテンプトのステップを蓄積
+            all_steps.extend(state.steps)
+
+            if state.answer is not None:
+                # 回答が得られた → 終了
+                return AgentRunResult(
+                    task_id=task.task_id,
+                    answer=state.answer,
+                    steps=all_steps,
+                    failure_reason=None,
                 )
 
-        if state.answer is None and state.failure_reason is None:
-            # ステップ上限到達時、最後の validate_answer 候補があれば強制回答
-            salvaged = self._salvage_answer(state)
-            if salvaged is not None:
-                state.answer = salvaged
-                state.failure_reason = None
+            # 回答なし
+            if is_last_attempt:
+                # 最後のリトライ: 直前の出力から回答を救済してから終了
+                salvaged = self._salvage_answer(state)
+                return AgentRunResult(
+                    task_id=task.task_id,
+                    answer=salvaged,
+                    steps=all_steps,
+                    failure_reason=None if salvaged is not None else (
+                        "Agent did not submit an answer within max_steps."
+                    ),
+                )
             else:
-                state.failure_reason = "Agent did not submit an answer within max_steps."
+                # リトライ残あり: リスタートマーカーを追加して次のアテンプトへ
+                all_steps.append(StepRecord(
+                    step_index=len(state.steps) + 1,
+                    thought=(
+                        f"Attempt {attempt + 1}/{max_retries} exhausted {max_steps} steps "
+                        "without an answer. Restarting from step 1."
+                    ),
+                    action="__restart__",
+                    action_input={"attempt": attempt + 1, "max_retries": max_retries},
+                    raw_response="",
+                    observation={"restarting": True, "attempt": attempt + 1},
+                    ok=False,
+                ))
 
+        # 通常到達しない (max_retries >= 1 なら上のループで必ず return)
         return AgentRunResult(
             task_id=task.task_id,
-            answer=state.answer,
-            steps=list(state.steps),
-            failure_reason=state.failure_reason,
+            answer=None,
+            steps=all_steps,
+            failure_reason="Agent did not submit an answer within max_steps.",
         )

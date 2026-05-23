@@ -391,7 +391,7 @@ def retrieve_context_chunks(
     *,
     query: str,
     keywords: list[str] | None = None,
-    max_chunks: int = 5,
+    max_chunks: int = 10,
     max_chars_per_chunk: int = 2000,
 ) -> dict[str, Any]:
     """質問に関連する doc/knowledge chunk を単純な語彙一致で返す。"""

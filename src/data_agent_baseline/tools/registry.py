@@ -77,7 +77,8 @@ def _read_doc(task: PublicTask, action_input: dict[str, Any]) -> ToolExecutionRe
 
     path = str(action_input["path"])
     max_chars = int(action_input.get("max_chars", 4000))
-    return ToolExecutionResult(ok=True, content=read_doc_preview(task, path, max_chars=max_chars))
+    offset = int(action_input.get("offset", 0))
+    return ToolExecutionResult(ok=True, content=read_doc_preview(task, path, max_chars=max_chars, offset=offset))
 
 
 def _inspect_sqlite_schema(task: PublicTask, action_input: dict[str, Any]) -> ToolExecutionResult:
@@ -323,9 +324,11 @@ def create_default_tool_registry() -> ToolRegistry:
             name="read_doc",
             description=(
                 "Preview a text document inside `context/`. "
-                "Large files are truncated to the requested maximum character count."
+                "Supports `offset` (default 0) to read subsequent pages. "
+                "If `truncated: true`, call again with offset += max_chars until truncated=false. "
+                "Always read ALL pages before attempting Python parsing."
             ),
-            input_schema={"path": "relative/path/to/file.md", "max_chars": 4000},
+            input_schema={"path": "relative/path/to/file.md", "max_chars": 4000, "offset": 0},
         ),
         "retrieve_context": ToolSpec(
             name="retrieve_context",

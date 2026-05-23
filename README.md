@@ -40,6 +40,12 @@ v2 では素の ReAct ループに加えて、context profile、文書 retrieval
    curl -LsSf https://astral.sh/uv/install.sh | sh
    ```
 
+
+  or
+  ```powershell
+  powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+  ```
+
 2. 公開デモ dataset を Google Drive からダウンロードし、`data/public/` 配下に配置します。
 
    - https://drive.google.com/file/d/1c6u5WlFw4KV7CBRyXh5BvFYbKqxhBSbL/view?usp=share_link
@@ -173,6 +179,10 @@ uv run dabench evaluate-run \
   --run-dir "$RUN_DIR" \
   --gold-dir data/public/output \
   --output-json "$RUN_DIR/evaluation.json"
+```
+
+```powershell
+uv run dabench run-benchmark --config configs/react_baseline.local.yaml; $RUN_DIR = (Get-ChildItem artifacts/runs | Sort-Object LastWriteTime -Descending | Select-Object -First 1).FullName; uv run dabench evaluate-run --run-dir "$RUN_DIR" --gold-dir data/public/output --output-json "$RUN_DIR/evaluation.json"
 ```
 
 出力先:
